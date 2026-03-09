@@ -24,10 +24,10 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 # === Frontend standalone ===
 cd frontend
-npm install
-npm run dev              # Dev server on :3000
-npm run build            # Production build
-npm run lint             # ESLint
+bun install
+bun run dev              # Dev server on :3000
+bun run build            # Production build
+bun run lint             # ESLint
 
 # === API quick tests ===
 curl http://localhost:8000/api/health
