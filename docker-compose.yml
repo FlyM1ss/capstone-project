@@ -1,0 +1,54 @@
+services:
+  db:
+    image: paradedb/paradedb:latest
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-deloitte}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-deloitte_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-search_engine}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deloitte -d search_engine"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-deloitte}:${POSTGRES_PASSWORD:-deloitte_dev}@db:5432/${POSTGRES_DB:-search_engine}
+      EMBEDDING_API_URL: ${EMBEDDING_API_URL:-http://host.docker.internal:8001/embed}
+      COHERE_API_KEY: ${COHERE_API_KEY}
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-dev_secret_change_me}
+      NEXTAUTH_URL: http://localhost:3000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
