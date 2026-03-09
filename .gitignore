@@ -1,0 +1,71 @@
+# ===== Secrets & Credentials =====
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.p12
+*.pfx
+*.jks
+secrets/
+credentials/
+service-account*.json
+*-credentials.json
+*-secret.json
+api_keys.*
+*.keystore
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+.venv/
+env/
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# ===== Node.js =====
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ===== IDE & Editors =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.lnk
+
+# ===== Docker =====
+docker-compose.override.yml
+
+# ===== Logs & Temp =====
+logs/
+*.log
+tmp/
+temp/
+.cache/
+
+# ===== Data & Indexes =====
+*.db
+*.sqlite
+*.sqlite3
+data/
+elasticsearch-data/
