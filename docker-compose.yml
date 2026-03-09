@@ -23,7 +23,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-deloitte}:${POSTGRES_PASSWORD:-deloitte_dev}@db:5432/${POSTGRES_DB:-search_engine}
+      DATABASE_URL: ${DATABASE_URL}
       EMBEDDING_API_URL: ${EMBEDDING_API_URL:-http://host.docker.internal:8001/embed}
       COHERE_API_KEY: ${COHERE_API_KEY}
     volumes:

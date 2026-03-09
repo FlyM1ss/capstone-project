@@ -6,52 +6,92 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ITWS 4100 (IT Capstone) project — an AI-driven company-wide search engine prototype for Deloitte. The system uses NLP with hybrid retrieval (semantic + BM25 keyword search) to let employees search internal resources via natural language queries.
 
-**Tech stack:** Next.js 15 (App Router) + TypeScript + shadcn/ui + Vercel AI SDK frontend, FastAPI backend, PostgreSQL 16 with pgvector + ParadeDB (unified hybrid search), Qwen3-Embedding-0.6B embeddings, Cohere Rerank v3.5, Docling (document parsing), NextAuth.js (auth), Docker Compose deployment.
-
-## Repository Structure
-
-- `frontend/` — Next.js 15 App Router frontend
-  - `app/` — Pages: landing (`/`), search results (`/search`), admin upload (`/admin/upload`)
-  - `components/` — UI components (search-bar, result-card, filter-panel, file-upload) + shadcn/ui
-  - `lib/api.ts` — API client for backend communication
-- `backend/` — FastAPI backend
-  - `app/api/` — Route handlers (health, auth, documents, search)
-  - `app/services/` — Business logic (search, ingestion, embeddings, reranker, auth, validation)
-  - `app/models/` — SQLAlchemy ORM models (`db.py`) and Pydantic schemas (`schemas.py`)
-  - `app/core/` — Config, database connection, dependency injection
-  - `app/scripts/ingest_all.py` — Batch document ingestion script
-  - `db/init.sql` — Database schema with pgvector + ParadeDB setup
-- `docker-compose.yml` — 3 containers: db (ParadeDB), backend, frontend
-- `notebooks/` — Colab embedding server setup instructions
-- `scripts/` — Demo data download script
-- `software-engineering/` — Software design deliverable (docx/gdoc generation, Mermaid diagrams)
-- `docs/plans/` — Architecture design and implementation plans
-- `Proposal/`, `Pre-Project-Research/`, `CostBenefitAnalysis/` — Project deliverables
+**Tech stack:** Next.js 15 (App Router) + TypeScript + shadcn/ui + Vercel AI SDK frontend, FastAPI backend (Python 3.11), PostgreSQL 16 with pgvector + ParadeDB (unified hybrid search), Qwen3-Embedding-0.6B (1024-dim vectors), Cohere Rerank v3.5, Docling (document parsing), NextAuth.js (auth), Docker Compose deployment.
 
 ## Key Commands
 
 ```bash
-# Start all services
-docker compose up -d
+# === Full stack (Docker) ===
+docker compose up -d                    # Start all 3 services (db, backend, frontend)
+docker compose down                     # Stop all services
+docker compose logs -f backend          # Tail backend logs
+docker compose exec backend python -m app.scripts.ingest_all  # Batch ingest demo docs
 
-# Check backend health
+# === Backend standalone ===
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# === Frontend standalone ===
+cd frontend
+npm install
+npm run dev              # Dev server on :3000
+npm run build            # Production build
+npm run lint             # ESLint
+
+# === API quick tests ===
 curl http://localhost:8000/api/health
-
-# Upload a document
+curl -X POST http://localhost:8000/api/search \
+  -H "Content-Type: application/json" \
+  -d '{"query": "quarterly report"}'
 curl -X POST http://localhost:8000/api/documents -F "file=@path/to/file.pdf"
 
-# Search
-curl -X POST http://localhost:8000/api/search -H "Content-Type: application/json" -d '{"query": "quarterly report"}'
-
-# Batch ingest demo documents
-docker compose exec backend python -m app.scripts.ingest_all
-
-# Frontend dev (standalone)
-cd frontend && npm run dev
-
-# Generate the software engineering .docx
+# === Software engineering deliverable ===
 cd software-engineering && python3 build_docx.py
 ```
+
+## Architecture
+
+### Search Pipeline (the core flow)
+
+```
+Query → Embed (Qwen3, external service) → Parallel retrieval:
+  ├─ pgvector cosine similarity (HNSW index)
+  └─ ParadeDB BM25 keyword search
+→ Reciprocal Rank Fusion (RRF, k=60) → Cohere Rerank v3.5 → RBAC filter → Results
+```
+
+- **Embedding model** is hosted externally (Google Colab + ngrok). Backend calls it via `EMBEDDING_API_URL`. The endpoint expects `POST {"texts": [...]}` and returns `{"embeddings": [[...]]}`.
+- **Single PostgreSQL instance** (ParadeDB image) handles both vector search and BM25 — no separate vector DB.
+- **BM25 index** is lazily created after the first document ingestion (`_ensure_bm25_index` in `services/ingestion.py`), not in `init.sql`.
+- **Reranker** gracefully degrades: returns original order if `COHERE_API_KEY` is empty or the API call fails.
+- Search tuning params are in `backend/app/core/config.py`: `SEARCH_TOP_K=50`, `RERANK_TOP_N=10`, `RRF_K=60`, `CHUNK_SIZE=512`, `CHUNK_OVERLAP=50`.
+
+### Backend Layering
+
+```
+api/ (FastAPI routers) → services/ (business logic) → models/ (SQLAlchemy ORM + Pydantic schemas)
+                                                      core/ (config, database, DI)
+```
+
+- **Routers**: `health.py`, `auth.py`, `documents.py`, `search.py` — all mounted under `/api` prefix in `main.py`
+- **Services**: `search.py` (hybrid_search + RRF), `ingestion.py` (Docling parse + chunk + embed + store), `embeddings.py` (HTTP client to external model), `reranker.py` (Cohere), `auth.py` (JWT + bcrypt), `validation.py`
+- **Database**: async SQLAlchemy with `asyncpg` driver. Session via `core/database.py` → `core/deps.py` (DI)
+- **Models**: 4 tables — `documents`, `document_chunks` (with `vector(1024)` column), `users`, `query_logs`
+
+### Frontend Structure
+
+- App Router with 3 pages: landing (`/`), search results (`/search`), admin upload (`/admin/upload`)
+- `lib/api.ts` — API client that calls backend via `NEXT_PUBLIC_API_URL`
+- All interactive components use `"use client"` directive
+- UI: shadcn/ui components + Tailwind CSS 4 + Geist font
+
+### Auth
+
+- JWT tokens (HS256, 60min expiry) with 3 roles:
+  - `analyst` → public docs only
+  - `manager` → public + internal
+  - `admin` → public + internal + confidential + upload
+- **Currently bypassed**: search endpoint hardcodes `user_role = "admin"` for demo purposes
+- Demo users: `admin@deloitte.com` / `manager@deloitte.com` / `analyst@deloitte.com` (password: `password123`)
+
+### Docker Services
+
+| Service    | Image/Build       | Port | Notes                                      |
+|------------|-------------------|------|--------------------------------------------|
+| `db`       | paradedb/paradedb  | 5432 | Runs `backend/db/init.sql` on first start  |
+| `backend`  | `./backend`       | 8000 | Volume-mounts `./backend` for hot reload   |
+| `frontend` | `./frontend`      | 3000 | Volume-mounts `./frontend` for hot reload  |
 
 ## Secrets
 
@@ -59,17 +99,10 @@ cd software-engineering && python3 build_docx.py
 - `credentials.json` / `token.json` (in `software-engineering/`) — Google OAuth, gitignored.
 - Never commit `.env`, API keys, or credential files.
 
-## Architecture Notes
-
-- **Search pipeline**: Query → embed (Qwen3) → parallel pgvector cosine + ParadeDB BM25 → RRF merge → Cohere rerank → RBAC filter → results
-- **Embedding model**: Hosted on Google Colab with ngrok tunnel, backend reads `EMBEDDING_API_URL` from `.env`
-- **Database**: Single PostgreSQL (ParadeDB image) provides both vector search and BM25 — no separate vector DB
-- **Auth**: JWT tokens with 3 roles — analyst (public docs), manager (+internal), admin (+confidential, +upload)
-- **Demo users**: admin@deloitte.com / manager@deloitte.com / analyst@deloitte.com (password: "password123")
-
 ## Conventions
 
-- Monorepo: frontend and backend are sibling directories, orchestrated by Docker Compose
-- Backend follows layered architecture: `api/` → `services/` → `models/` → database
-- Frontend uses Next.js App Router with `"use client"` directives for interactive components
+- Monorepo: `frontend/` and `backend/` are sibling directories, orchestrated by Docker Compose
+- Backend uses raw SQL (`sqlalchemy.text()`) for search queries, ORM for document/user CRUD
+- Frontend API types in `lib/api.ts` mirror backend Pydantic schemas in `models/schemas.py` — keep in sync
 - Diagram source of truth is `.mmd` files in `software-engineering/diagrams/`
+- No test framework is set up yet (`backend/tests/` contains only `__init__.py`)
