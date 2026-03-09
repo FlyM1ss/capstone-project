@@ -23,10 +23,13 @@ export interface SearchResponse {
 export async function searchDocuments(
   query: string,
   filters?: Record<string, string>,
+  token?: string | null,
 ): Promise<SearchResponse> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${API_URL}/api/search`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ query, filters }),
   });
   if (!res.ok) {
@@ -53,9 +56,12 @@ export async function listDocuments(): Promise<DocumentInfo[]> {
   return res.json();
 }
 
-export async function uploadDocument(formData: FormData): Promise<void> {
+export async function uploadDocument(formData: FormData, token?: string | null): Promise<void> {
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${API_URL}/api/documents`, {
     method: "POST",
+    headers,
     body: formData,
   });
   if (!res.ok) {
