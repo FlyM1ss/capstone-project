@@ -1,0 +1,27 @@
+flowchart TD
+    Start([Start]) --> A[User enters natural<br/>language query]
+    A --> B{Input validation<br/>passes?}
+    B -->|No| C[Display error message<br/>with guidance]
+    C --> A
+    B -->|Yes| D[Classify intent and<br/>extract entities]
+    D --> E[Convert query to<br/>vector embedding]
+    E --> F1[Keyword Search<br/>BM25]
+    E --> F2[Semantic Search<br/>Vector Similarity]
+    F1 --> G[Merge results using<br/>Reciprocal Rank Fusion]
+    F2 --> G
+    G --> H[Apply metadata filters<br/>and RBAC permissions]
+    H --> I{Results<br/>found?}
+    I -->|No| J["Display 'No results found'<br/>with suggestions and tips"]
+    J --> K{User refines<br/>query?}
+    K -->|Yes| A
+    K -->|No| End1([End])
+    I -->|Yes| L[Display ranked results:<br/>title, snippet, author,<br/>date, type]
+    L --> M{User selects<br/>a result?}
+    M -->|Yes| N[Open full document]
+    N --> O[Log query and<br/>selected result]
+    O --> End2([End])
+    M -->|No| P{User applies<br/>filters?}
+    P -->|Yes| H
+    P -->|No| Q{User refines<br/>query?}
+    Q -->|Yes| A
+    Q -->|No| End3([End])

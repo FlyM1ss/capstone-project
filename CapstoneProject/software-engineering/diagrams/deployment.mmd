@@ -1,0 +1,29 @@
+graph TB
+    subgraph Client Workstation
+        Browser[Web Browser<br/>Chrome / Edge / Firefox]
+    end
+
+    subgraph Docker Host / Cloud Server
+        subgraph Frontend Container
+            ReactApp[React + TypeScript<br/>Application<br/>Nginx Reverse Proxy]
+        end
+
+        subgraph Backend Container
+            FastAPI[FastAPI Application<br/>Python 3.11+<br/>Uvicorn ASGI Server]
+            NLP[NLP Engine<br/>BGE-M3 Embedding Model<br/>Intent Classifier]
+        end
+
+        subgraph Database Container
+            PG[(PostgreSQL 16<br/>Metadata Store<br/>BM25 Search<br/>Audit Logs)]
+        end
+    end
+
+    subgraph Managed Cloud Services
+        Pinecone[(Pinecone<br/>Vector Database<br/>Semantic Search Index)]
+    end
+
+    Browser -->|HTTPS| ReactApp
+    ReactApp -->|HTTP / REST API| FastAPI
+    FastAPI -->|SQL / ORM| PG
+    FastAPI -->|gRPC / REST| Pinecone
+    FastAPI --> NLP

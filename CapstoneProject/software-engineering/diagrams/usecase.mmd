@@ -1,0 +1,21 @@
+graph LR
+    subgraph Deloitte AI Search Engine
+        UC1["Search for Resources<br/>by Name or Topic"]
+        UC2["Search for Information<br/>Within Documents"]
+        UC3["Filter and Refine<br/>Search Results"]
+        UC4["Ingest and Index<br/>Documents"]
+        UC5["Manage Query<br/>Boundaries"]
+    end
+
+    Employee((Deloitte<br/>Employee))
+    Admin((System<br/>Administrator))
+
+    Employee --> UC1
+    Employee --> UC2
+    Employee --> UC3
+    Admin --> UC4
+    Admin --> UC5
+
+    UC1 -.->|extends| UC2
+    UC1 -.->|extends| UC3
+    UC2 -.->|extends| UC3

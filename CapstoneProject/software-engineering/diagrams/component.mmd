@@ -1,0 +1,47 @@
+graph TB
+    subgraph Frontend Layer
+        UI[Search Interface<br/>React + TypeScript]
+        Filter[Filter Panel<br/>Component]
+        Results[Results Display<br/>Component]
+        Guidance[User Guidance<br/>Component]
+    end
+
+    subgraph API Layer
+        API[FastAPI<br/>REST API Server]
+        Auth[Authentication<br/>and RBAC Middleware]
+        RateLimit[Rate Limiter<br/>Middleware]
+    end
+
+    subgraph Processing Layer
+        InputVal[Input Validator<br/>and Content Filter]
+        NLPEngine[NLP Engine<br/>Intent + Embedding]
+        Ranker[Ranking Service<br/>RRF Merge + Re-rank]
+    end
+
+    subgraph Data Layer
+        VectorDB[(Vector Store<br/>Pinecone)]
+        MetadataDB[(Metadata Store<br/>PostgreSQL)]
+        Ingestion[Document Ingestion<br/>Pipeline]
+    end
+
+    subgraph External
+        EmbedModel[Embedding Model<br/>BGE-M3]
+        DocSource[Document Sources<br/>PDFs, DOCX, PPTX]
+    end
+
+    UI --> API
+    Filter --> API
+    Results --> API
+    Guidance --> API
+    API --> Auth
+    API --> RateLimit
+    API --> InputVal
+    InputVal --> NLPEngine
+    NLPEngine --> EmbedModel
+    NLPEngine --> Ranker
+    Ranker --> VectorDB
+    Ranker --> MetadataDB
+    Ingestion --> VectorDB
+    Ingestion --> MetadataDB
+    Ingestion --> EmbedModel
+    DocSource --> Ingestion

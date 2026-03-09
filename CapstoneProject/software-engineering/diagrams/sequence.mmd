@@ -1,0 +1,40 @@
+sequenceDiagram
+    actor User as Deloitte Employee
+    participant UI as React Frontend
+    participant API as FastAPI Backend
+    participant Val as Input Validator
+    participant NLP as NLP Engine
+    participant VS as Vector Store (Pinecone)
+    participant DB as Metadata Store (PostgreSQL)
+    participant Rank as Ranking Service
+
+    User->>UI: Enter search query
+    UI->>API: POST /api/search {query, filters}
+    API->>Val: validate(query)
+
+    alt Validation Fails
+        Val-->>API: ValidationError (reason)
+        API-->>UI: 400 Error + guidance message
+        UI-->>User: Display error + suggestions
+    else Validation Passes
+        Val-->>API: OK
+        API->>NLP: classify_intent(query)
+        NLP-->>API: intent, entities
+        API->>NLP: generate_embedding(query)
+        NLP-->>API: query_vector [768 dims]
+
+        par Parallel Retrieval
+            API->>VS: semantic_search(query_vector, top_k=50)
+            VS-->>API: semantic_results[]
+        and
+            API->>DB: keyword_search(query_text, top_k=50)
+            DB-->>API: keyword_results[]
+        end
+
+        API->>Rank: merge_and_rank(semantic_results, keyword_results, filters)
+        Rank-->>API: ranked_results[]
+        API->>DB: log_query(user_id, query, result_count)
+        DB-->>API: logged
+        API-->>UI: 200 OK + ranked_results[]
+        UI-->>User: Display results (title, snippet, author, date, type)
+    end
