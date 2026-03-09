@@ -5,25 +5,32 @@ graph TB
 
     subgraph Docker Host / Cloud Server
         subgraph Frontend Container
-            ReactApp[React + TypeScript<br/>Application<br/>Nginx Reverse Proxy]
+            NextApp[Next.js + TypeScript<br/>Vercel AI SDK<br/>Nginx Reverse Proxy]
         end
 
         subgraph Backend Container
             FastAPI[FastAPI Application<br/>Python 3.11+<br/>Uvicorn ASGI Server]
-            NLP[NLP Engine<br/>BGE-M3 Embedding Model<br/>Intent Classifier]
+            NLP[NLP Engine<br/>Qwen3-Embedding-0.6B<br/>Intent Classifier]
+            DocProc[Document Processor<br/>Docling]
         end
 
         subgraph Database Container
-            PG[(PostgreSQL 16<br/>Metadata Store<br/>BM25 Search<br/>Audit Logs)]
+            PG[(PostgreSQL 16<br/>pgvector + ParadeDB<br/>Hybrid Search<br/>Metadata + Audit Logs)]
+        end
+
+        subgraph Auth Container
+            Keycloak[Keycloak<br/>Identity Provider<br/>SSO / OIDC / RBAC]
         end
     end
 
-    subgraph Managed Cloud Services
-        Pinecone[(Pinecone<br/>Vector Database<br/>Semantic Search Index)]
+    subgraph External API Services
+        CohereRerank[Cohere Rerank 4<br/>Result Reranking]
     end
 
-    Browser -->|HTTPS| ReactApp
-    ReactApp -->|HTTP / REST API| FastAPI
-    FastAPI -->|SQL / ORM| PG
-    FastAPI -->|gRPC / REST| Pinecone
+    Browser -->|HTTPS| NextApp
+    NextApp -->|HTTP / REST API| FastAPI
+    FastAPI -->|SQL / pgvector / ParadeDB| PG
+    FastAPI -->|HTTPS| CohereRerank
     FastAPI --> NLP
+    FastAPI --> DocProc
+    FastAPI -->|OIDC| Keycloak

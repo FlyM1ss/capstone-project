@@ -5,11 +5,12 @@ flowchart TD
     C --> A
     B -->|Yes| D[Classify intent and<br/>extract entities]
     D --> E[Convert query to<br/>vector embedding]
-    E --> F1[Keyword Search<br/>BM25]
-    E --> F2[Semantic Search<br/>Vector Similarity]
+    E --> F1[Keyword Search<br/>ParadeDB BM25]
+    E --> F2[Semantic Search<br/>pgvector Similarity]
     F1 --> G[Merge results using<br/>Reciprocal Rank Fusion]
     F2 --> G
-    G --> H[Apply metadata filters<br/>and RBAC permissions]
+    G --> G2[Rerank top results<br/>via Cohere Rerank 4]
+    G2 --> H[Apply metadata filters<br/>and RBAC permissions]
     H --> I{Results<br/>found?}
     I -->|No| J["Display 'No results found'<br/>with suggestions and tips"]
     J --> K{User refines<br/>query?}

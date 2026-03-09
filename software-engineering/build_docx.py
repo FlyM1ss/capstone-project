@@ -194,10 +194,11 @@ add_para("Trigger: Initial search returns too many results or the user wants to 
 add_heading("Use Case 4: Ingest and Index Documents", level=2)
 add_body(
     "A system administrator uploads new documents (PDFs, Word files, slide decks) "
-    "into the system. The ingestion pipeline extracts text and metadata, chunks long "
-    "documents, generates vector embeddings, and stores both the metadata (in PostgreSQL) "
-    "and embeddings (in the vector store) for future retrieval. Cross-referencing is "
-    "maintained via unique document IDs."
+    "into the system. The ingestion pipeline uses Docling to parse and extract text and "
+    "metadata, chunks long documents, generates vector embeddings using Qwen3-Embedding-0.6B, "
+    "and stores both the metadata and embeddings in a unified PostgreSQL database (with "
+    "pgvector + ParadeDB extensions) for future retrieval. Cross-referencing is maintained "
+    "via unique document IDs."
 )
 add_para("Actors: System Administrator (primary)", bold=True)
 add_para("Trigger: New company resources are made available and need to be searchable.", bold=True)
@@ -251,8 +252,8 @@ spec_rows = [
      "5. The system converts the query into a vector embedding.\n"
      "6. The system performs hybrid retrieval: keyword search (BM25) and semantic "
      "search (vector cosine similarity) run in parallel.\n"
-     "7. The system merges and re-ranks results using Reciprocal Rank Fusion, "
-     "applying metadata signals (recency, document type).\n"
+     "7. The system merges results using Reciprocal Rank Fusion, then re-ranks "
+     "them with Cohere Rerank 4, applying metadata signals (recency, document type).\n"
      "8. The system returns a ranked list displaying each result\u2019s title, snippet, "
      "author, date, document type, and relevance indicator.\n"
      "9. The user clicks on a result to access the full document.\n"
@@ -332,7 +333,8 @@ add_body(
     "constraints, or content policies\u2014and provides guidance for reformulation. Valid "
     "queries proceed through intent classification, embedding generation, and parallel "
     "hybrid retrieval (keyword + semantic). Results are merged via Reciprocal Rank "
-    "Fusion, filtered by metadata and RBAC permissions, and displayed to the user. If "
+    "Fusion, re-ranked by Cohere Rerank 4, filtered by metadata and RBAC permissions, "
+    "and displayed to the user. If "
     "no results are found, the system offers suggestions. The user may refine the query, "
     "apply filters, or select a result to view the full document. All interactions are "
     "logged."
@@ -347,22 +349,24 @@ add_heading("6. Sequence Diagram: Search for Resources", level=1)
 
 add_body(
     "The Sequence Diagram shows the object-level interactions that occur when a user "
-    "performs a search, illustrating the messages exchanged between the frontend, backend "
-    "API, NLP engine, vector store, metadata store, and ranking service."
+    "performs a search, illustrating the messages exchanged between the Next.js frontend, "
+    "FastAPI backend, NLP engine, unified PostgreSQL store (pgvector + ParadeDB), and "
+    "ranking service."
 )
 
 add_image("sequence.png", width=Inches(6.2))
 
 add_body(
-    "The sequence begins when the user enters a query in the React frontend, which sends "
+    "The sequence begins when the user enters a query in the Next.js frontend, which sends "
     "an HTTP POST request to the FastAPI backend. The backend first validates the input "
     "through the Input Validator. If validation fails, an error with guidance is returned "
     "to the user. On success, the backend calls the NLP Engine to classify the user\u2019s "
-    "intent and generate a vector embedding of the query. Two retrieval paths execute in "
-    "parallel: the Vector Store (Pinecone) performs semantic similarity search while the "
-    "Metadata Store (PostgreSQL) performs BM25 keyword search. Both result sets are passed "
-    "to the Ranking Service, which merges them using Reciprocal Rank Fusion and applies "
-    "any metadata filters. The ranked results are returned to the frontend for display. "
+    "intent and generate a vector embedding of the query using Qwen3-Embedding-0.6B. Two "
+    "retrieval paths execute in parallel against the unified PostgreSQL database: pgvector "
+    "performs semantic similarity search while ParadeDB performs BM25 keyword search. Both "
+    "result sets are passed to the Ranking Service, which merges them using Reciprocal Rank "
+    "Fusion and then re-ranks the merged results with Cohere Rerank 4 before applying any "
+    "metadata filters. The ranked results are returned to the frontend for display. "
     "The query is logged in PostgreSQL for analytics and audit purposes."
 )
 
@@ -382,19 +386,23 @@ add_image("component.png", width=Inches(5.5))
 
 add_body(
     "The system is organized into four layers. The Frontend Layer consists of "
-    "React + TypeScript components: the Search Interface (main search bar), Filter Panel "
+    "Next.js + TypeScript components: the Search Interface (main search bar), Filter Panel "
     "(metadata filtering), Results Display (ranked results with metadata), and User "
     "Guidance (tips, suggestions, \u201cDid you mean?\u201d corrections). The API Layer is a "
-    "FastAPI REST server with Authentication/RBAC middleware that enforces access controls "
-    "and a Rate Limiter to prevent abuse. The Processing Layer contains the Input Validator "
-    "(enforcing query boundaries\u2014length limits, language, PII blocking, prompt injection "
-    "detection), the NLP Engine (intent classification + embedding generation using the "
-    "BGE-M3 model), and the Ranking Service (Reciprocal Rank Fusion of keyword and semantic "
-    "results). The Data Layer includes the Vector Store (Pinecone, for semantic search over "
-    "document embeddings), the Metadata Store (PostgreSQL, for structured metadata, keyword "
-    "search via BM25, and audit logs), and the Document Ingestion Pipeline (which parses "
-    "incoming documents, extracts text and metadata, chunks content, generates embeddings, "
-    "and stores everything with cross-referenced document IDs)."
+    "FastAPI REST server with NextAuth.js + Keycloak authentication and RBAC middleware "
+    "that enforces access controls and a Rate Limiter to prevent abuse. The Processing "
+    "Layer contains the Input Validator (enforcing query boundaries\u2014length limits, language, "
+    "PII blocking, prompt injection detection), the NLP Engine (intent classification + "
+    "embedding generation using the Qwen3-Embedding-0.6B model), the Reranker (Cohere "
+    "Rerank 4 for re-ranking merged results), Docling (document parsing for the ingestion "
+    "pipeline), and the Ranking Service (Reciprocal Rank Fusion of keyword and semantic "
+    "results followed by Cohere Rerank 4 re-ranking). The Data Layer uses a unified "
+    "PostgreSQL database with pgvector + ParadeDB extensions, providing both semantic "
+    "search over document embeddings (via pgvector) and BM25 keyword search (via ParadeDB) "
+    "in a single store, along with structured metadata and audit logs. The Document "
+    "Ingestion Pipeline uses Docling to parse incoming documents, extracts text and "
+    "metadata, chunks content, generates embeddings with Qwen3-Embedding-0.6B, and stores "
+    "everything in PostgreSQL with cross-referenced document IDs."
 )
 
 
@@ -415,16 +423,17 @@ add_body(
     "The deployment architecture uses Docker containers for reproducibility and "
     "cloud-readiness. The Client Workstation runs a standard web browser accessing the "
     "application over HTTPS. The Docker Host (which can be deployed to any cloud provider) "
-    "runs three containers: (1) the Frontend Container serves the React + TypeScript "
-    "application through an Nginx reverse proxy that handles static assets and routes API "
-    "calls; (2) the Backend Container runs the FastAPI application on a Uvicorn ASGI server "
-    "with the NLP Engine (BGE-M3 embedding model and intent classifier) loaded in-process "
-    "for low-latency inference; (3) the Database Container runs PostgreSQL 16, which stores "
-    "document metadata, supports BM25 keyword search, and maintains audit logs. The Vector "
-    "Store (Pinecone) is deployed as a managed cloud service, providing optimized semantic "
-    "search over document embeddings with low query latency. Communication between the "
-    "frontend and backend uses REST API calls. The backend communicates with PostgreSQL "
-    "via SQL/ORM and with Pinecone via its REST/gRPC API."
+    "runs four containers: (1) the Frontend Container serves the Next.js + TypeScript "
+    "application with built-in server-side rendering and API routes; (2) the Backend "
+    "Container runs the FastAPI application on a Uvicorn ASGI server with the NLP Engine "
+    "(Qwen3-Embedding-0.6B embedding model and intent classifier) loaded in-process for "
+    "low-latency inference; (3) the Database Container runs PostgreSQL 16 with pgvector + "
+    "ParadeDB extensions, providing a unified store for document embeddings (semantic "
+    "search via pgvector), BM25 keyword search (via ParadeDB), structured metadata, and "
+    "audit logs; and (4) the Keycloak Container provides identity and access management, "
+    "integrated with NextAuth.js on the frontend for authentication and RBAC. All data "
+    "resides in the single PostgreSQL instance. Communication between the frontend and "
+    "backend uses REST API calls. The backend communicates with PostgreSQL via SQL/ORM."
 )
 
 

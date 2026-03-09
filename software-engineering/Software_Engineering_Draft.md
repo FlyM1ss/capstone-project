@@ -50,7 +50,7 @@ After performing an initial search, a user applies metadata filters to narrow do
 
 ### Use Case 4: Ingest and Index Documents
 
-A system administrator uploads new documents (PDFs, Word files, slide decks) into the system. The ingestion pipeline extracts text and metadata, chunks long documents, generates vector embeddings, and stores both the metadata (in PostgreSQL) and embeddings (in the vector store) for future retrieval. Cross-referencing is maintained via unique document IDs.
+A system administrator uploads new documents (PDFs, Word files, slide decks) into the system. The ingestion pipeline uses Docling (IBM) for high-fidelity document parsing (97.9% accuracy on complex tables), extracts text and metadata, chunks long documents, generates vector embeddings via Qwen3-Embedding-0.6B, and stores everything in the unified PostgreSQL database — metadata, BM25-indexed text (via ParadeDB), and vector embeddings (via pgvector) — for future hybrid retrieval. Cross-referencing is maintained via unique document IDs.
 
 **Actors:** System Administrator (primary)
 
@@ -130,11 +130,12 @@ flowchart TD
     C --> A
     B -->|Yes| D[Classify intent and<br/>extract entities]
     D --> E[Convert query to<br/>vector embedding]
-    E --> F1[Keyword Search<br/>BM25]
-    E --> F2[Semantic Search<br/>Vector Similarity]
+    E --> F1[Keyword Search<br/>ParadeDB BM25]
+    E --> F2[Semantic Search<br/>pgvector Similarity]
     F1 --> G[Merge results using<br/>Reciprocal Rank Fusion]
     F2 --> G
-    G --> H[Apply metadata filters<br/>and RBAC permissions]
+    G --> G2[Rerank top results<br/>via Cohere Rerank 4]
+    G2 --> H[Apply metadata filters<br/>and RBAC permissions]
     H --> I{Results<br/>found?}
     I -->|No| J[Display 'No results found'<br/>with suggestions and tips]
     J --> K{User refines<br/>query?}
@@ -152,7 +153,7 @@ flowchart TD
     Q -->|No| End3([End])
 ```
 
-**Description:** The activity begins when a Deloitte employee enters a query. The system first validates the input—rejecting queries that violate length limits, language constraints, or content policies—and provides guidance for reformulation. Valid queries proceed through intent classification, embedding generation, and parallel hybrid retrieval (keyword + semantic). Results are merged via Reciprocal Rank Fusion, filtered by metadata and RBAC permissions, and displayed to the user. If no results are found, the system offers suggestions. The user may refine the query, apply filters, or select a result to view the full document. All interactions are logged.
+**Description:** The activity begins when a Deloitte employee enters a query. The system first validates the input—rejecting queries that violate length limits, language constraints, or content policies—and provides guidance for reformulation. Valid queries proceed through intent classification, embedding generation via Qwen3-Embedding-0.6B, and parallel hybrid retrieval within PostgreSQL (ParadeDB BM25 keyword search + pgvector semantic search). Results are merged via Reciprocal Rank Fusion, reranked by Cohere Rerank 4 for improved accuracy, filtered by metadata and RBAC permissions, and displayed to the user. If no results are found, the system offers suggestions. The user may refine the query, apply filters, or select a result to view the full document. All interactions are logged.
 
 ---
 
@@ -163,13 +164,13 @@ The Sequence Diagram shows the object-level interactions that occur when a user 
 ```mermaid
 sequenceDiagram
     actor User as Deloitte Employee
-    participant UI as React Frontend
+    participant UI as Next.js Frontend
     participant API as FastAPI Backend
     participant Val as Input Validator
     participant NLP as NLP Engine
-    participant VS as Vector Store<br/>(Pinecone)
-    participant DB as Metadata Store<br/>(PostgreSQL)
+    participant DB as PostgreSQL<br/>(pgvector + ParadeDB)
     participant Rank as Ranking Service
+    participant RR as Cohere Rerank 4
 
     User->>UI: Enter search query
     UI->>API: POST /api/search {query, filters}
@@ -184,26 +185,28 @@ sequenceDiagram
         API->>NLP: classify_intent(query)
         NLP-->>API: intent, entities
         API->>NLP: generate_embedding(query)
-        NLP-->>API: query_vector [768 dims]
+        NLP-->>API: query_vector [1024 dims]
 
-        par Parallel Retrieval
-            API->>VS: semantic_search(query_vector, top_k=50)
-            VS-->>API: semantic_results[]
+        par Parallel Hybrid Retrieval
+            API->>DB: semantic_search(query_vector, top_k=50)
+            DB-->>API: semantic_results[]
         and
-            API->>DB: keyword_search(query_text, top_k=50)
+            API->>DB: bm25_search(query_text, top_k=50)
             DB-->>API: keyword_results[]
         end
 
-        API->>Rank: merge_and_rank(semantic_results, keyword_results, filters)
-        Rank-->>API: ranked_results[]
+        API->>Rank: rrf_merge(semantic_results, keyword_results, filters)
+        Rank-->>API: merged_results[top 50]
+        API->>RR: rerank(query, merged_results)
+        RR-->>API: reranked_results[top 10]
         API->>DB: log_query(user_id, query, result_count)
         DB-->>API: logged
-        API-->>UI: 200 OK + ranked_results[]
+        API-->>UI: 200 OK + reranked_results[]
         UI-->>User: Display results (title, snippet, author, date, type)
     end
 ```
 
-**Description:** The sequence begins when the user enters a query in the React frontend, which sends an HTTP POST request to the FastAPI backend. The backend first validates the input through the Input Validator. If validation fails, an error with guidance is returned to the user. On success, the backend calls the NLP Engine to classify the user's intent and generate a vector embedding of the query. Two retrieval paths execute in parallel: the Vector Store (Pinecone) performs semantic similarity search while the Metadata Store (PostgreSQL) performs BM25 keyword search. Both result sets are passed to the Ranking Service, which merges them using Reciprocal Rank Fusion and applies any metadata filters. The ranked results are returned to the frontend for display. The query is logged in PostgreSQL for analytics and audit purposes.
+**Description:** The sequence begins when the user enters a query in the Next.js frontend, which sends an HTTP POST request to the FastAPI backend. The backend first validates the input through the Input Validator. If validation fails, an error with guidance is returned to the user. On success, the backend calls the NLP Engine to classify the user's intent and generate a vector embedding of the query using the Qwen3-Embedding-0.6B model. Two retrieval paths execute in parallel within the unified PostgreSQL database: pgvector performs semantic similarity search while ParadeDB performs BM25 keyword search. Both result sets are merged using Reciprocal Rank Fusion, then the top candidates are passed to Cohere Rerank 4 for cross-encoder reranking, which improves accuracy by 33–40%. The reranked results are returned to the frontend for display. The query is logged in PostgreSQL for analytics and audit purposes.
 
 ---
 
@@ -214,32 +217,33 @@ The Component Diagram shows the high-level software components of the system and
 ```mermaid
 graph TB
     subgraph "Frontend Layer"
-        UI[Search Interface<br/>React + TypeScript]
+        UI[Search Interface<br/>Next.js + TypeScript]
         Filter[Filter Panel<br/>Component]
-        Results[Results Display<br/>Component]
+        Results[Results Display<br/>Vercel AI SDK]
         Guidance[User Guidance<br/>Component]
     end
 
     subgraph "API Layer"
         API[FastAPI<br/>REST API Server]
-        Auth[Authentication<br/>& RBAC Middleware]
+        Auth[Authentication<br/>NextAuth.js + Keycloak]
         RateLimit[Rate Limiter<br/>Middleware]
     end
 
     subgraph "Processing Layer"
         InputVal[Input Validator<br/>& Content Filter]
         NLPEngine[NLP Engine<br/>Intent + Embedding]
+        Reranker[Reranker<br/>Cohere Rerank 4]
         Ranker[Ranking Service<br/>RRF Merge + Re-rank]
     end
 
     subgraph "Data Layer"
-        VectorDB[(Vector Store<br/>Pinecone)]
-        MetadataDB[(Metadata Store<br/>PostgreSQL)]
+        UnifiedDB[(PostgreSQL 16<br/>pgvector + ParadeDB<br/>Hybrid Search)]
         Ingestion[Document Ingestion<br/>Pipeline]
+        DocParser[Document Parser<br/>Docling]
     end
 
     subgraph "External"
-        EmbedModel[Embedding Model<br/>BGE-M3]
+        EmbedModel[Embedding Model<br/>Qwen3-Embedding-0.6B]
         DocSource[Document Sources<br/>PDFs, DOCX, PPTX]
     end
 
@@ -253,15 +257,15 @@ graph TB
     InputVal --> NLPEngine
     NLPEngine --> EmbedModel
     NLPEngine --> Ranker
-    Ranker --> VectorDB
-    Ranker --> MetadataDB
-    Ingestion --> VectorDB
-    Ingestion --> MetadataDB
+    Ranker --> UnifiedDB
+    Ranker --> Reranker
+    Ingestion --> UnifiedDB
     Ingestion --> EmbedModel
-    DocSource --> Ingestion
+    Ingestion --> DocParser
+    DocSource --> DocParser
 ```
 
-**Description:** The system is organized into four layers. The **Frontend Layer** consists of React + TypeScript components: the Search Interface (main search bar), Filter Panel (metadata filtering), Results Display (ranked results with metadata), and User Guidance (tips, suggestions, "Did you mean?" corrections). The **API Layer** is a FastAPI REST server with Authentication/RBAC middleware that enforces access controls and a Rate Limiter to prevent abuse. The **Processing Layer** contains the Input Validator (enforcing query boundaries—length limits, language, PII blocking, prompt injection detection), the NLP Engine (intent classification + embedding generation using the BGE-M3 model), and the Ranking Service (Reciprocal Rank Fusion of keyword and semantic results). The **Data Layer** includes the Vector Store (Pinecone, for semantic search over document embeddings), the Metadata Store (PostgreSQL, for structured metadata, keyword search via BM25, and audit logs), and the Document Ingestion Pipeline (which parses incoming documents, extracts text and metadata, chunks content, generates embeddings, and stores everything with cross-referenced document IDs).
+**Description:** The system is organized into four layers. The **Frontend Layer** consists of Next.js + TypeScript components powered by the Vercel AI SDK: the Search Interface (main search bar), Filter Panel (metadata filtering), Results Display (ranked results with streaming AI elements), and User Guidance (tips, suggestions, "Did you mean?" corrections). The **API Layer** is a FastAPI REST server with Authentication via NextAuth.js + Keycloak (supporting SSO/OIDC/RBAC) and a Rate Limiter to prevent abuse. The **Processing Layer** contains the Input Validator (enforcing query boundaries—length limits, language, PII blocking, prompt injection detection), the NLP Engine (intent classification + embedding generation using the Qwen3-Embedding-0.6B model), the Ranking Service (Reciprocal Rank Fusion of keyword and semantic results), and the Reranker (Cohere Rerank 4 for cross-encoder reranking of top candidates, improving accuracy by 33–40%). The **Data Layer** uses a unified PostgreSQL 16 database with pgvector (for semantic vector search) and ParadeDB (for BM25 keyword search), eliminating the need for a separate vector database. The Document Ingestion Pipeline uses Docling (IBM) for high-fidelity document parsing (97.9% accuracy on complex tables), chunks content, generates embeddings via Qwen3-Embedding-0.6B, and stores everything in PostgreSQL with cross-referenced document IDs.
 
 ---
 
@@ -277,34 +281,41 @@ graph TB
 
     subgraph "Docker Host / Cloud Server"
         subgraph "Frontend Container"
-            ReactApp[React + TypeScript<br/>Application<br/>Nginx Reverse Proxy]
+            NextApp[Next.js + TypeScript<br/>Vercel AI SDK<br/>Nginx Reverse Proxy]
         end
 
         subgraph "Backend Container"
             FastAPI[FastAPI Application<br/>Python 3.11+<br/>Uvicorn ASGI Server]
-            NLP[NLP Engine<br/>BGE-M3 Embedding Model<br/>Intent Classifier]
+            NLP[NLP Engine<br/>Qwen3-Embedding-0.6B<br/>Intent Classifier]
+            DocProc[Document Processor<br/>Docling]
         end
 
         subgraph "Database Container"
-            PG[(PostgreSQL 16<br/>Metadata Store<br/>BM25 Search<br/>Audit Logs)]
+            PG[(PostgreSQL 16<br/>pgvector + ParadeDB<br/>Hybrid Search<br/>Metadata + Audit Logs)]
+        end
+
+        subgraph "Auth Container"
+            Keycloak[Keycloak<br/>Identity Provider<br/>SSO / OIDC / RBAC]
         end
     end
 
-    subgraph "Managed Cloud Services"
-        Pinecone[(Pinecone<br/>Vector Database<br/>Semantic Search Index)]
+    subgraph "External API Services"
+        CohereRerank[Cohere Rerank 4<br/>Result Reranking]
     end
 
-    Browser -->|HTTPS| ReactApp
-    ReactApp -->|HTTP / REST API| FastAPI
-    FastAPI -->|SQL / ORM| PG
-    FastAPI -->|gRPC / REST| Pinecone
+    Browser -->|HTTPS| NextApp
+    NextApp -->|HTTP / REST API| FastAPI
+    FastAPI -->|SQL / pgvector / ParadeDB| PG
+    FastAPI -->|HTTPS| CohereRerank
     FastAPI --> NLP
+    FastAPI --> DocProc
+    FastAPI -->|OIDC| Keycloak
 ```
 
-**Description:** The deployment architecture uses Docker containers for reproducibility and cloud-readiness. The **Client Workstation** runs a standard web browser accessing the application over HTTPS. The **Docker Host** (which can be deployed to any cloud provider) runs three containers: (1) the **Frontend Container** serves the React + TypeScript application through an Nginx reverse proxy that handles static assets and routes API calls; (2) the **Backend Container** runs the FastAPI application on a Uvicorn ASGI server with the NLP Engine (BGE-M3 embedding model and intent classifier) loaded in-process for low-latency inference; (3) the **Database Container** runs PostgreSQL 16, which stores document metadata, supports BM25 keyword search, and maintains audit logs. The **Vector Store** (Pinecone) is deployed as a managed cloud service, providing optimized semantic search over document embeddings with low query latency. Communication between the frontend and backend uses REST API calls. The backend communicates with PostgreSQL via SQL/ORM and with Pinecone via its REST/gRPC API.
+**Description:** The deployment architecture uses Docker containers for reproducibility and cloud-readiness. The **Client Workstation** runs a standard web browser accessing the application over HTTPS. The **Docker Host** (which can be deployed to any cloud provider) runs four containers: (1) the **Frontend Container** serves the Next.js + TypeScript application with Vercel AI SDK through an Nginx reverse proxy that handles static assets and routes API calls; (2) the **Backend Container** runs the FastAPI application on a Uvicorn ASGI server with the NLP Engine (Qwen3-Embedding-0.6B embedding model and intent classifier) loaded in-process for low-latency inference, plus the Docling document processor for high-fidelity parsing; (3) the **Database Container** runs PostgreSQL 16 with pgvector and ParadeDB extensions, providing unified hybrid search (BM25 keyword search via ParadeDB + semantic vector search via pgvector), document metadata storage, and audit logs — all in a single database; (4) the **Auth Container** runs Keycloak as the identity provider, supporting SSO, OIDC, and RBAC for enterprise authentication. **Cohere Rerank 4** is the only external API service, used for cross-encoder reranking of search results. Communication between the frontend and backend uses REST API calls. The backend communicates with PostgreSQL via SQL/ORM with pgvector and ParadeDB extensions, and with Cohere Rerank via HTTPS.
 
 ---
 
 ## 9. Summary
 
-This software engineering specification defines the design of the Deloitte AI-Driven Search Engine through five use cases, a detailed specification of the primary "Search for Resources" use case, and five UML diagrams. The system's architecture reflects the technical requirements outlined in Deloitte's project brief: a user-friendly search application with NLP-powered intent understanding, clearly defined query boundaries, built-in user guidance, and a searchable resource database. The component and deployment diagrams demonstrate a clean separation of concerns across the frontend, API, processing, and data layers, with Docker containerization ensuring a reproducible and cloud-ready deployment.
+This software engineering specification defines the design of the Deloitte AI-Driven Search Engine through five use cases, a detailed specification of the primary "Search for Resources" use case, and five UML diagrams. The system's architecture reflects the technical requirements outlined in Deloitte's project brief: a user-friendly search application with NLP-powered intent understanding, clearly defined query boundaries, built-in user guidance, and a searchable resource database. The architecture leverages a unified PostgreSQL database with pgvector and ParadeDB extensions for hybrid search, Qwen3-Embedding-0.6B for state-of-the-art semantic embeddings, Cohere Rerank 4 for cross-encoder reranking, Docling for high-fidelity document parsing, and a Next.js + Vercel AI SDK frontend. The component and deployment diagrams demonstrate a clean separation of concerns across the frontend, API, processing, and data layers, with Docker containerization ensuring a reproducible and cloud-ready deployment.

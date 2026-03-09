@@ -1,12 +1,12 @@
 sequenceDiagram
     actor User as Deloitte Employee
-    participant UI as React Frontend
+    participant UI as Next.js Frontend
     participant API as FastAPI Backend
     participant Val as Input Validator
     participant NLP as NLP Engine
-    participant VS as Vector Store (Pinecone)
-    participant DB as Metadata Store (PostgreSQL)
+    participant DB as PostgreSQL<br/>(pgvector + ParadeDB)
     participant Rank as Ranking Service
+    participant RR as Cohere Rerank 4
 
     User->>UI: Enter search query
     UI->>API: POST /api/search {query, filters}
@@ -21,20 +21,22 @@ sequenceDiagram
         API->>NLP: classify_intent(query)
         NLP-->>API: intent, entities
         API->>NLP: generate_embedding(query)
-        NLP-->>API: query_vector [768 dims]
+        NLP-->>API: query_vector [1024 dims]
 
-        par Parallel Retrieval
-            API->>VS: semantic_search(query_vector, top_k=50)
-            VS-->>API: semantic_results[]
+        par Parallel Hybrid Retrieval
+            API->>DB: semantic_search(query_vector, top_k=50)
+            DB-->>API: semantic_results[]
         and
-            API->>DB: keyword_search(query_text, top_k=50)
+            API->>DB: bm25_search(query_text, top_k=50)
             DB-->>API: keyword_results[]
         end
 
-        API->>Rank: merge_and_rank(semantic_results, keyword_results, filters)
-        Rank-->>API: ranked_results[]
+        API->>Rank: rrf_merge(semantic_results, keyword_results, filters)
+        Rank-->>API: merged_results[top 50]
+        API->>RR: rerank(query, merged_results)
+        RR-->>API: reranked_results[top 10]
         API->>DB: log_query(user_id, query, result_count)
         DB-->>API: logged
-        API-->>UI: 200 OK + ranked_results[]
+        API-->>UI: 200 OK + reranked_results[]
         UI-->>User: Display results (title, snippet, author, date, type)
     end
