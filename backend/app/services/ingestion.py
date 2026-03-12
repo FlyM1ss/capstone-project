@@ -45,15 +45,9 @@ async def ingest_document(
     # 1. Parse with Docling (run in thread to avoid blocking async event loop)
     full_text, page_count = await asyncio.to_thread(_parse_document, file_path)
 
-    # Infer title (skip image tags, empty lines, and HTML comments)
+    # Use cleaned filename as title (more reliable than parsed text for diverse PDFs)
     if not title:
-        for line in full_text.strip().split("\n"):
-            line = line.strip().strip("#").strip()
-            if line and not line.startswith("<!--") and not line.startswith("!["):
-                title = line[:200]
-                break
-        if not title:
-            title = Path(file_path).stem
+        title = Path(file_path).stem.replace("_", " ").replace("-", " ").strip()
 
     # 2. Create document record
     doc = Document(

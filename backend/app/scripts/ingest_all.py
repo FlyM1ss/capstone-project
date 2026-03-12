@@ -51,15 +51,9 @@ def ingest_document(
     full_text = result.document.export_to_markdown()
     page_count = result.document.num_pages() if hasattr(result.document, "num_pages") else None
 
-    # Infer title (skip image tags, empty lines, and HTML comments)
+    # Use cleaned filename as title (more reliable than parsed text for diverse PDFs)
     if not title:
-        for line in full_text.strip().split("\n"):
-            line = line.strip().strip("#").strip()
-            if line and not line.startswith("<!--") and not line.startswith("!["):
-                title = line[:200]
-                break
-        if not title:
-            title = Path(file_path).stem
+        title = Path(file_path).stem.replace("_", " ").replace("-", " ").strip()
 
     # 2. Insert document
     doc_id = str(uuid.uuid4())
