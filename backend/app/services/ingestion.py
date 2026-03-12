@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from pathlib import Path
 
@@ -7,6 +8,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.db import Document, DocumentChunk
 from app.services.embeddings import generate_embeddings
+
+
+def _parse_document(file_path: str) -> tuple[str, int | None]:
+    """Synchronous Docling parsing — runs in a thread pool."""
+    converter = DocumentConverter()
+    result = converter.convert(file_path)
+    full_text = result.document.export_to_markdown()
+    page_count = result.document.num_pages() if hasattr(result.document, "num_pages") else None
+    return full_text, page_count
 
 
 def chunk_text(text_content: str, chunk_size: int = 512, overlap: int = 50) -> list[str]:
@@ -32,15 +42,18 @@ async def ingest_document(
     access_level: str = "public",
 ) -> tuple[Document, int]:
     """Parse a PDF, chunk it, embed chunks, and store everything."""
-    # 1. Parse with Docling
-    converter = DocumentConverter()
-    result = converter.convert(file_path)
-    full_text = result.document.export_to_markdown()
+    # 1. Parse with Docling (run in thread to avoid blocking async event loop)
+    full_text, page_count = await asyncio.to_thread(_parse_document, file_path)
 
-    # Infer title from first line if not provided
+    # Infer title (skip image tags, empty lines, and HTML comments)
     if not title:
-        first_line = full_text.strip().split("\n")[0]
-        title = first_line.strip("# ").strip()[:200] or Path(file_path).stem
+        for line in full_text.strip().split("\n"):
+            line = line.strip().strip("#").strip()
+            if line and not line.startswith("<!--") and not line.startswith("!["):
+                title = line[:200]
+                break
+        if not title:
+            title = Path(file_path).stem
 
     # 2. Create document record
     doc = Document(
@@ -50,7 +63,7 @@ async def ingest_document(
         category=category,
         access_level=access_level,
         file_path=file_path,
-        page_count=result.document.num_pages() if hasattr(result.document, "num_pages") else None,
+        page_count=page_count,
     )
     db.add(doc)
     await db.flush()  # Get doc.id
