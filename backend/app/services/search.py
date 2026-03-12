@@ -30,11 +30,11 @@ async def hybrid_search(
     # 3. Semantic search (pgvector cosine similarity)
     semantic_sql = text(f"""
         SELECT dc.id, dc.document_id, dc.content, dc.chunk_index,
-               1 - (dc.embedding <=> :embedding::vector) AS score
+               1 - (dc.embedding <=> CAST(:embedding AS vector)) AS score
         FROM document_chunks dc
         JOIN documents d ON dc.document_id = d.id
         WHERE d.access_level IN ({access_filter})
-        ORDER BY dc.embedding <=> :embedding::vector
+        ORDER BY dc.embedding <=> CAST(:embedding AS vector)
         LIMIT :top_k
     """)
     semantic_result = await db.execute(
@@ -61,8 +61,8 @@ async def hybrid_search(
         )
         bm25_rows = bm25_result.fetchall()
     except Exception:
-        # BM25 index may not exist yet (no docs ingested)
-        pass
+        # BM25 index may not exist yet — rollback to clear failed transaction state
+        await db.rollback()
 
     # 5. Reciprocal Rank Fusion
     merged = _rrf_merge(semantic_rows, bm25_rows, k=settings.RRF_K)
