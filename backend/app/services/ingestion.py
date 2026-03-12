@@ -50,7 +50,7 @@ async def ingest_document(
         category=category,
         access_level=access_level,
         file_path=file_path,
-        page_count=getattr(result.document, "num_pages", None),
+        page_count=result.document.num_pages() if hasattr(result.document, "num_pages") else None,
     )
     db.add(doc)
     await db.flush()  # Get doc.id

@@ -11,15 +11,15 @@ async def main():
     files = [f for f in os.listdir(docs_dir) if f.lower().endswith((".pdf", ".docx", ".pptx"))]
     print(f"Found {len(files)} documents to ingest")
 
-    async with async_session() as db:
-        for i, filename in enumerate(files):
-            path = os.path.join(docs_dir, filename)
-            print(f"[{i+1}/{len(files)}] Ingesting {filename}...")
-            try:
+    for i, filename in enumerate(files):
+        path = os.path.join(docs_dir, filename)
+        print(f"[{i+1}/{len(files)}] Ingesting {filename}...")
+        try:
+            async with async_session() as db:
                 doc, chunks = await ingest_document(db, path)
                 print(f"  -> {doc.title}: {chunks} chunks")
-            except Exception as e:
-                print(f"  -> ERROR: {e}")
+        except Exception as e:
+            print(f"  -> ERROR: {e}")
 
     print("Done!")
 
