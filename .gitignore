@@ -70,7 +70,7 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
-data/
+data/*
 !data/sample-docs/
 !data/sample-docs/**
 elasticsearch-data/
