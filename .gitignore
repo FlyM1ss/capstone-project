@@ -73,4 +73,7 @@ temp/
 data/*
 !data/sample-docs/
 !data/sample-docs/**
+!data/auxiliary
+!data/poisoned
+!data/sample
 elasticsearch-data/
