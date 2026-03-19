@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     RRF_K: int = 60
     CHUNK_SIZE: int = 512
     CHUNK_OVERLAP: int = 50
+    TITLE_BOOST_WEIGHT: float = 1.5
 
     class Config:
         env_file = ".env"

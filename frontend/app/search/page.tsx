@@ -17,16 +17,17 @@ function SearchContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [showLatestOnly, setShowLatestOnly] = useState(true);
 
   useEffect(() => {
     if (!query) return;
     setLoading(true);
     setError(null);
-    searchDocuments(query, Object.keys(filters).length > 0 ? filters : undefined, token)
+    searchDocuments(query, Object.keys(filters).length > 0 ? filters : undefined, token, showLatestOnly)
       .then(setResponse)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [query, filters, token]);
+  }, [query, filters, token, showLatestOnly]);
 
   return (
     <div className="min-h-screen">
@@ -44,7 +45,12 @@ function SearchContent() {
 
       <div className="max-w-5xl mx-auto px-6 py-6 flex gap-6">
         <aside className="w-48 shrink-0 hidden md:block">
-          <FilterPanel filters={filters} onFilterChange={setFilters} />
+          <FilterPanel
+            filters={filters}
+            onFilterChange={setFilters}
+            showLatestOnly={showLatestOnly}
+            onShowLatestOnlyChange={setShowLatestOnly}
+          />
         </aside>
 
         <main className="flex-1">

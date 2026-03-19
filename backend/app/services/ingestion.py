@@ -1,4 +1,5 @@
 import asyncio
+import re
 import uuid
 from pathlib import Path
 
@@ -6,8 +7,8 @@ from docling.document_converter import DocumentConverter
 from sqlalchemy import text, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.db import Document, DocumentChunk
-from app.services.embeddings import generate_embeddings
+from app.models.db import Document, DocumentChunk, DocumentTitleEmbedding
+from app.services.embeddings import generate_embedding, generate_embeddings
 
 
 def _parse_document(file_path: str) -> tuple[str, int | None]:
@@ -33,6 +34,24 @@ def chunk_text(text_content: str, chunk_size: int = 512, overlap: int = 50) -> l
     return chunks
 
 
+def _extract_version_info(filename: str) -> tuple[str, int]:
+    """Extract document_group and version from filename.
+
+    'Remote_Work_Policy_v2.docx' -> ('remote work policy', 2)
+    'Acceptable_Use_Policy.pdf'  -> ('acceptable use policy', 1)
+    """
+    stem = Path(filename).stem
+    match = re.search(r'_v(\d+)$', stem)
+    if match:
+        version = int(match.group(1))
+        base = stem[:match.start()]
+    else:
+        version = 1
+        base = stem
+    document_group = base.replace("_", " ").replace("-", " ").strip().lower()
+    return document_group, version
+
+
 async def ingest_document(
     db: AsyncSession,
     file_path: str,
@@ -41,7 +60,7 @@ async def ingest_document(
     category: str = "report",
     access_level: str = "public",
 ) -> tuple[Document, int]:
-    """Parse a PDF, chunk it, embed chunks, and store everything."""
+    """Parse a document, chunk it, embed chunks and title, and store everything."""
     # 1. Parse with Docling (run in thread to avoid blocking async event loop)
     full_text, page_count = await asyncio.to_thread(_parse_document, file_path)
 
@@ -49,7 +68,10 @@ async def ingest_document(
     if not title:
         title = Path(file_path).stem.replace("_", " ").replace("-", " ").strip()
 
-    # 2. Create document record
+    # 2. Extract version info from filename
+    document_group, version = _extract_version_info(file_path)
+
+    # 3. Create document record
     doc = Document(
         title=title,
         author=author,
@@ -58,21 +80,32 @@ async def ingest_document(
         access_level=access_level,
         file_path=file_path,
         page_count=page_count,
+        document_group=document_group,
+        version=version,
     )
     db.add(doc)
     await db.flush()  # Get doc.id
 
-    # 3. Chunk text
+    # 4. Chunk text
     chunks = chunk_text(full_text)
-    if not chunks:
-        await db.commit()
-        return doc, 0
 
-    # 4. Generate embeddings (batch)
-    embeddings = await generate_embeddings(chunks)
+    # 5. Generate title embedding and chunk embeddings
+    # Batch title + all chunks together to minimize API calls
+    texts_to_embed = [title] + chunks if chunks else [title]
+    all_embeddings = await generate_embeddings(texts_to_embed)
+    title_embedding = all_embeddings[0]
+    chunk_embeddings = all_embeddings[1:] if chunks else []
 
-    # 5. Store chunks with embeddings
-    for i, (chunk_text_content, embedding) in enumerate(zip(chunks, embeddings)):
+    # 6. Store title embedding
+    title_emb = DocumentTitleEmbedding(
+        document_id=doc.id,
+        title_text=title,
+        embedding=title_embedding,
+    )
+    db.add(title_emb)
+
+    # 7. Store chunks with embeddings
+    for i, (chunk_text_content, embedding) in enumerate(zip(chunks, chunk_embeddings)):
         chunk = DocumentChunk(
             document_id=doc.id,
             chunk_index=i,
@@ -83,24 +116,28 @@ async def ingest_document(
 
     await db.commit()
 
-    # 6. Ensure ParadeDB BM25 index exists
-    await _ensure_bm25_index(db)
+    # 8. Ensure ParadeDB BM25 index exists
+    if chunks:
+        await _ensure_bm25_index(db)
 
     return doc, len(chunks)
 
 
 async def _ensure_bm25_index(db: AsyncSession):
     """Create ParadeDB BM25 index if it doesn't exist."""
-    try:
-        await db.execute(text("""
-            CALL paradedb.create_bm25(
-                index_name => 'idx_chunks_bm25',
-                table_name => 'document_chunks',
-                key_field => 'id',
-                text_fields => paradedb.field('content')
-            )
-        """))
-        await db.commit()
-    except Exception:
-        # Index may already exist
-        await db.rollback()
+    result = await db.execute(text(
+        "SELECT 1 FROM pg_indexes WHERE indexname = 'idx_chunks_bm25'"
+    ))
+    if result.fetchone() is None:
+        try:
+            await db.execute(text("""
+                CALL paradedb.create_bm25(
+                    index_name => 'idx_chunks_bm25',
+                    table_name => 'document_chunks',
+                    key_field => 'id',
+                    text_fields => paradedb.field('content')
+                )
+            """))
+            await db.commit()
+        except Exception:
+            await db.rollback()

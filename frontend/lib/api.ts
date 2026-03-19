@@ -11,6 +11,8 @@ export interface SearchResult {
   score: number;
   page_count: number | null;
   created_date: string | null;
+  version: number | null;
+  document_group: string | null;
 }
 
 export interface SearchResponse {
@@ -24,13 +26,14 @@ export async function searchDocuments(
   query: string,
   filters?: Record<string, string>,
   token?: string | null,
+  showLatestOnly: boolean = true,
 ): Promise<SearchResponse> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${API_URL}/api/search`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ query, filters }),
+    body: JSON.stringify({ query, filters, show_latest_only: showLatestOnly }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

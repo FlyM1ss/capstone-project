@@ -15,7 +15,14 @@ export function ResultCard({ result }: { result: SearchResult }) {
     <Card className="hover:shadow-md transition-shadow cursor-pointer">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base leading-snug">{result.title}</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base leading-snug">{result.title}</CardTitle>
+            {result.version && result.version > 1 && (
+              <Badge variant="secondary" className="text-xs shrink-0">
+                v{result.version}
+              </Badge>
+            )}
+          </div>
           <Badge variant="outline" className={categoryColors[result.category] || ""}>
             {result.category}
           </Badge>

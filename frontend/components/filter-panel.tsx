@@ -1,16 +1,25 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface FilterPanelProps {
   filters: Record<string, string>;
   onFilterChange: (filters: Record<string, string>) => void;
+  showLatestOnly: boolean;
+  onShowLatestOnlyChange: (value: boolean) => void;
 }
 
 const categories = ["policy", "report", "deck", "memo"];
 const docTypes = ["pdf", "docx", "pptx"];
 
-export function FilterPanel({ filters, onFilterChange }: FilterPanelProps) {
+export function FilterPanel({
+  filters,
+  onFilterChange,
+  showLatestOnly,
+  onShowLatestOnlyChange,
+}: FilterPanelProps) {
   const toggleFilter = (key: string, value: string) => {
     const updated = { ...filters };
     if (updated[key] === value) {
@@ -23,6 +32,19 @@ export function FilterPanel({ filters, onFilterChange }: FilterPanelProps) {
 
   return (
     <div className="space-y-4">
+      <div>
+        <h3 className="text-sm font-semibold mb-2">Versions</h3>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="latest-only"
+            checked={showLatestOnly}
+            onCheckedChange={onShowLatestOnlyChange}
+          />
+          <Label htmlFor="latest-only" className="text-sm cursor-pointer">
+            Latest only
+          </Label>
+        </div>
+      </div>
       <div>
         <h3 className="text-sm font-semibold mb-2">Category</h3>
         <div className="flex flex-col gap-1">

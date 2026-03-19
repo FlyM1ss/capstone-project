@@ -23,9 +23,12 @@ class Document(Base):
     access_level: Mapped[str] = mapped_column(String(20), default="public")
     file_path: Mapped[str | None] = mapped_column(Text)
     page_count: Mapped[int | None] = mapped_column(Integer)
+    document_group: Mapped[str | None] = mapped_column(Text)
+    version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
     chunks: Mapped[list["DocumentChunk"]] = relationship(back_populates="document", cascade="all, delete-orphan")
+    title_embedding: Mapped["DocumentTitleEmbedding | None"] = relationship(back_populates="document", cascade="all, delete-orphan", uselist=False)
 
 
 class DocumentChunk(Base):
@@ -40,6 +43,18 @@ class DocumentChunk(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
     document: Mapped["Document"] = relationship(back_populates="chunks")
+
+
+class DocumentTitleEmbedding(Base):
+    __tablename__ = "document_title_embeddings"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    document_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), unique=True)
+    title_text: Mapped[str] = mapped_column(Text, nullable=False)
+    embedding = mapped_column(Vector(1024))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+    document: Mapped["Document"] = relationship(back_populates="title_embedding")
 
 
 class User(Base):

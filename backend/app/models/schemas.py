@@ -9,6 +9,7 @@ class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=500)
     filters: dict | None = None  # {"category": "policy", "access_level": "public"}
     top_k: int = Field(default=10, ge=1, le=50)
+    show_latest_only: bool = True
 
 
 class ChunkResult(BaseModel):
@@ -31,6 +32,8 @@ class SearchResultItem(BaseModel):
     score: float
     page_count: int | None
     created_date: datetime | None
+    version: int | None = None
+    document_group: str | None = None
 
 
 class SearchResponse(BaseModel):

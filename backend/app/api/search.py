@@ -23,6 +23,7 @@ async def search(
     results, latency_ms = await hybrid_search(
         db, body.query, filters=body.filters,
         user_role=user_role, top_k=body.top_k,
+        show_latest_only=body.show_latest_only,
     )
 
     return SearchResponse(

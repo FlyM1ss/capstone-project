@@ -14,6 +14,18 @@ CREATE TABLE IF NOT EXISTS documents (
     access_level TEXT DEFAULT 'public' CHECK (access_level IN ('public', 'internal', 'confidential')),
     file_path TEXT,
     page_count INTEGER,
+    document_group TEXT,
+    version INTEGER DEFAULT 1 CHECK (version >= 1),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT uq_document_group_version UNIQUE (document_group, version)
+);
+
+-- Document title embeddings (separate table for clean separation)
+CREATE TABLE IF NOT EXISTS document_title_embeddings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    document_id UUID NOT NULL UNIQUE REFERENCES documents(id) ON DELETE CASCADE,
+    title_text TEXT NOT NULL,
+    embedding vector(1024),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -59,7 +71,14 @@ CREATE INDEX IF NOT EXISTS idx_chunks_embedding
 CREATE INDEX IF NOT EXISTS idx_chunks_document_id ON document_chunks(document_id);
 CREATE INDEX IF NOT EXISTS idx_documents_access_level ON documents(access_level);
 CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(category);
+CREATE INDEX IF NOT EXISTS idx_documents_document_group ON documents(document_group);
 CREATE INDEX IF NOT EXISTS idx_query_logs_user_id ON query_logs(user_id);
+
+-- HNSW index for title embedding similarity search
+CREATE INDEX IF NOT EXISTS idx_title_embeddings_vector
+    ON document_title_embeddings
+    USING hnsw (embedding vector_cosine_ops)
+    WITH (m = 16, ef_construction = 200);
 
 -- Seed demo users
 INSERT INTO users (email, name, hashed_password, role) VALUES
