@@ -3,7 +3,9 @@ import re
 import uuid
 from pathlib import Path
 
-from docling.document_converter import DocumentConverter
+from docling.datamodel.base_models import InputFormat
+from docling.document_converter import DocumentConverter, PowerpointFormatOption
+from docling.pipeline.simple_pipeline import SimplePipeline
 from sqlalchemy import text, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,8 +15,19 @@ from app.services.embeddings import generate_embedding, generate_embeddings
 
 def _parse_document(file_path: str) -> tuple[str, int | None]:
     """Synchronous Docling parsing — runs in a thread pool."""
-    converter = DocumentConverter()
-    result = converter.convert(file_path)
+    converter = DocumentConverter(
+        allowed_formats=[
+            InputFormat.PDF,
+            InputFormat.DOCX,
+            InputFormat.PPTX,
+        ],
+        format_options={
+            InputFormat.PPTX: PowerpointFormatOption(
+                pipeline_cls=SimplePipeline,
+            ),
+        },
+    )
+    result = converter.convert(Path(file_path))
     full_text = result.document.export_to_markdown()
     page_count = result.document.num_pages() if hasattr(result.document, "num_pages") else None
     return full_text, page_count

@@ -11,7 +11,9 @@ import uuid
 from pathlib import Path
 
 import httpx
-from docling.document_converter import DocumentConverter
+from docling.datamodel.base_models import InputFormat
+from docling.document_converter import DocumentConverter, PowerpointFormatOption
+from docling.pipeline.simple_pipeline import SimplePipeline
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
@@ -43,8 +45,19 @@ def ingest_document(
     access_level: str = "public",
 ) -> tuple[str, int]:
     # 1. Parse with Docling
-    converter = DocumentConverter()
-    result = converter.convert(file_path)
+    converter = DocumentConverter(
+        allowed_formats=[
+            InputFormat.PDF,
+            InputFormat.DOCX,
+            InputFormat.PPTX,
+        ],
+        format_options={
+            InputFormat.PPTX: PowerpointFormatOption(
+                pipeline_cls=SimplePipeline,
+            ),
+        },
+    )
+    result = converter.convert(Path(file_path))
     full_text = result.document.export_to_markdown()
     page_count = result.document.num_pages() if hasattr(result.document, "num_pages") else None
 
