@@ -5,14 +5,11 @@ import { useEffect, useState, Suspense } from "react";
 import { SearchBar } from "@/components/search-bar";
 import { ResultCard } from "@/components/result-card";
 import { FilterPanel } from "@/components/filter-panel";
-import { UserMenu } from "@/components/user-menu";
 import { searchDocuments, type SearchResponse } from "@/lib/api";
-import { useAuth } from "@/lib/auth-context";
 
 function SearchContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get("q") || "";
-  const { token } = useAuth();
   const [response, setResponse] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,11 +20,11 @@ function SearchContent() {
     if (!query) return;
     setLoading(true);
     setError(null);
-    searchDocuments(query, Object.keys(filters).length > 0 ? filters : undefined, token, showLatestOnly)
+    searchDocuments(query, Object.keys(filters).length > 0 ? filters : undefined, undefined, showLatestOnly)
       .then(setResponse)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [query, filters, token, showLatestOnly]);
+  }, [query, filters, showLatestOnly]);
 
   return (
     <div className="min-h-screen">
@@ -37,9 +34,6 @@ function SearchContent() {
             Deloitte Search
           </a>
           <SearchBar defaultValue={query} />
-          <div className="ml-auto shrink-0">
-            <UserMenu />
-          </div>
         </div>
       </header>
 
