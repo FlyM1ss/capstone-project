@@ -8,14 +8,14 @@ graph TB
 
     subgraph API Layer
         API[FastAPI<br/>REST API Server]
-        Auth[Authentication<br/>NextAuth.js + Keycloak]
+        Auth[Authentication<br/>NextAuth.js + JWT]
         RateLimit[Rate Limiter<br/>Middleware]
     end
 
     subgraph Processing Layer
         InputVal[Input Validator<br/>and Content Filter]
         NLPEngine[NLP Engine<br/>Intent + Embedding]
-        Reranker[Reranker<br/>Cohere Rerank 4]
+        Reranker[Reranker<br/>Cohere Rerank v3.5]
         Ranker[Ranking Service<br/>RRF Merge + Re-rank]
     end
 

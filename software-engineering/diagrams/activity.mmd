@@ -9,7 +9,7 @@ flowchart TD
     E --> F2[Semantic Search<br/>pgvector Similarity]
     F1 --> G[Merge results using<br/>Reciprocal Rank Fusion]
     F2 --> G
-    G --> G2[Rerank top results<br/>via Cohere Rerank 4]
+    G --> G2[Rerank top results<br/>via Cohere Rerank v3.5]
     G2 --> H[Apply metadata filters<br/>and RBAC permissions]
     H --> I{Results<br/>found?}
     I -->|No| J["Display 'No results found'<br/>with suggestions and tips"]

@@ -18,13 +18,13 @@ graph TB
             PG[(PostgreSQL 16<br/>pgvector + ParadeDB<br/>Hybrid Search<br/>Metadata + Audit Logs)]
         end
 
-        subgraph Auth Container
-            Keycloak[Keycloak<br/>Identity Provider<br/>SSO / OIDC / RBAC]
+        subgraph Auth Layer
+            NextAuth[NextAuth.js + JWT<br/>3-Tier RBAC<br/>bcrypt + HS256]
         end
     end
 
     subgraph External API Services
-        CohereRerank[Cohere Rerank 4<br/>Result Reranking]
+        CohereRerank[Cohere Rerank v3.5<br/>Result Reranking]
     end
 
     Browser -->|HTTPS| NextApp
@@ -33,4 +33,4 @@ graph TB
     FastAPI -->|HTTPS| CohereRerank
     FastAPI --> NLP
     FastAPI --> DocProc
-    FastAPI -->|OIDC| Keycloak
+    FastAPI -->|JWT Auth| NextAuth

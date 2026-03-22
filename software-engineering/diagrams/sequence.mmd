@@ -6,7 +6,7 @@ sequenceDiagram
     participant NLP as NLP Engine
     participant DB as PostgreSQL<br/>(pgvector + ParadeDB)
     participant Rank as Ranking Service
-    participant RR as Cohere Rerank 4
+    participant RR as Cohere Rerank v3.5
 
     User->>UI: Enter search query
     UI->>API: POST /api/search {query, filters}
@@ -29,9 +29,12 @@ sequenceDiagram
         and
             API->>DB: bm25_search(query_text, top_k=50)
             DB-->>API: keyword_results[]
+        and
+            API->>DB: title_similarity(query_vector, top_k=50)
+            DB-->>API: title_results[]
         end
 
-        API->>Rank: rrf_merge(semantic_results, keyword_results, filters)
+        API->>Rank: rrf_merge(semantic, keyword, title, title_boost=1.5×)
         Rank-->>API: merged_results[top 50]
         API->>RR: rerank(query, merged_results)
         RR-->>API: reranked_results[top 10]
