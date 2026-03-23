@@ -1,3 +1,4 @@
+import re
 import time
 from uuid import UUID
 
@@ -66,26 +67,28 @@ async def hybrid_search(
 
     # 5. BM25 keyword search (ParadeDB)
     bm25_rows = []
-    try:
-        bm25_sql = text(f"""
-            SELECT dc.id, dc.document_id, dc.content, dc.chunk_index,
-                   paradedb.score(dc.id) AS score
-            FROM document_chunks dc
-            JOIN documents d ON dc.document_id = d.id
-            WHERE dc.id @@@ paradedb.parse(:query)
-              AND d.access_level IN ({access_placeholders})
-              {category_clause}
-              {doc_type_clause}
-            ORDER BY paradedb.score(dc.id) DESC
-            LIMIT :top_k
-        """)
-        bm25_result = await db.execute(
-            bm25_sql, {"query": query, "top_k": settings.SEARCH_TOP_K,
-                       **filter_params},
-        )
-        bm25_rows = bm25_result.fetchall()
-    except Exception:
-        await db.rollback()
+    bm25_query = _sanitize_bm25_query(query)
+    if bm25_query:
+        try:
+            bm25_sql = text(f"""
+                SELECT dc.id, dc.document_id, dc.content, dc.chunk_index,
+                       paradedb.score(dc.id) AS score
+                FROM document_chunks dc
+                JOIN documents d ON dc.document_id = d.id
+                WHERE dc.id @@@ paradedb.parse(:query)
+                  AND d.access_level IN ({access_placeholders})
+                  {category_clause}
+                  {doc_type_clause}
+                ORDER BY paradedb.score(dc.id) DESC
+                LIMIT :top_k
+            """)
+            bm25_result = await db.execute(
+                bm25_sql, {"query": bm25_query, "top_k": settings.SEARCH_TOP_K,
+                           **filter_params},
+            )
+            bm25_rows = bm25_result.fetchall()
+        except Exception:
+            await db.rollback()
 
     # 6. Title similarity search (pgvector on title embeddings)
     title_sql = text(f"""
@@ -169,6 +172,14 @@ async def hybrid_search(
 
     latency_ms = int((time.time() - start) * 1000)
     return results, latency_ms
+
+
+def _sanitize_bm25_query(query: str) -> str:
+    """Strip characters that break Tantivy's query parser (used by ParadeDB BM25)."""
+    # Remove Tantivy special chars: + - && || ! ( ) { } [ ] ^ " ~ * ? : \ / '
+    sanitized = re.sub(r"[+\-&|!(){}\[\]^\"~*?:\\/']", " ", query)
+    # Collapse whitespace and strip
+    return " ".join(sanitized.split())
 
 
 def _get_access_levels(role: str) -> list[str]:

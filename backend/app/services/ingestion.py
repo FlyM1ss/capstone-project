@@ -137,19 +137,19 @@ async def ingest_document(
 
 
 async def _ensure_bm25_index(db: AsyncSession):
-    """Create ParadeDB BM25 index if it doesn't exist."""
+    """Create ParadeDB BM25 index if it doesn't exist.
+
+    Uses CREATE INDEX ... USING bm25 syntax (ParadeDB 0.8+).
+    """
     result = await db.execute(text(
         "SELECT 1 FROM pg_indexes WHERE indexname = 'idx_chunks_bm25'"
     ))
     if result.fetchone() is None:
         try:
             await db.execute(text("""
-                CALL paradedb.create_bm25(
-                    index_name => 'idx_chunks_bm25',
-                    table_name => 'document_chunks',
-                    key_field => 'id',
-                    text_fields => paradedb.field('content')
-                )
+                CREATE INDEX idx_chunks_bm25 ON document_chunks
+                USING bm25 (id, content)
+                WITH (key_field='id', text_fields='{"content": {}}')
             """))
             await db.commit()
         except Exception:
