@@ -5,25 +5,25 @@ graph TB
 
     subgraph Docker Host / Cloud Server
         subgraph Frontend Container
-            NextApp[Next.js + TypeScript<br/>Vercel AI SDK<br/>Nginx Reverse Proxy]
+            NextApp[Next.js + TypeScript<br/>Bun Runtime<br/>Port 3000]
         end
 
         subgraph Backend Container
             FastAPI[FastAPI Application<br/>Python 3.11+<br/>Uvicorn ASGI Server]
-            NLP[NLP Engine<br/>Qwen3-Embedding-0.6B<br/>Intent Classifier]
             DocProc[Document Processor<br/>Docling]
         end
 
         subgraph Database Container
-            PG[(PostgreSQL 16<br/>pgvector + ParadeDB<br/>Hybrid Search<br/>Metadata + Audit Logs)]
+            PG[(PostgreSQL 16<br/>pgvector + ParadeDB<br/>Hybrid Search<br/>Metadata + Query Logs)]
         end
 
         subgraph Auth Layer
-            NextAuth[NextAuth.js + JWT<br/>3-Tier RBAC<br/>bcrypt + HS256]
+            NextAuth[JWT Authentication<br/>3-Tier RBAC<br/>bcrypt + HS256]
         end
     end
 
     subgraph External API Services
+        EmbedAPI[Embedding Service<br/>Qwen3-Embedding-0.6B<br/>Google Colab + ngrok]
         CohereRerank[Cohere Rerank v3.5<br/>Result Reranking]
     end
 
@@ -31,6 +31,6 @@ graph TB
     NextApp -->|HTTP / REST API| FastAPI
     FastAPI -->|SQL / pgvector / ParadeDB| PG
     FastAPI -->|HTTPS| CohereRerank
-    FastAPI --> NLP
+    FastAPI -->|HTTPS| EmbedAPI
     FastAPI --> DocProc
     FastAPI -->|JWT Auth| NextAuth

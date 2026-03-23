@@ -2,19 +2,18 @@ graph TB
     subgraph Frontend Layer
         UI[Search Interface<br/>Next.js + TypeScript]
         Filter[Filter Panel<br/>Component]
-        Results[Results Display<br/>Vercel AI SDK]
-        Guidance[User Guidance<br/>Component]
+        Results[Results Display<br/>Component]
+        Tips[Search Tips<br/>Component]
     end
 
     subgraph API Layer
         API[FastAPI<br/>REST API Server]
-        Auth[Authentication<br/>NextAuth.js + JWT]
-        RateLimit[Rate Limiter<br/>Middleware]
+        Auth[Authentication<br/>JWT + RBAC]
     end
 
     subgraph Processing Layer
         InputVal[Input Validator<br/>and Content Filter]
-        NLPEngine[NLP Engine<br/>Intent + Embedding]
+        EmbedClient[Embedding Client<br/>HTTP to External Model]
         Reranker[Reranker<br/>Cohere Rerank v3.5]
         Ranker[Ranking Service<br/>RRF Merge + Re-rank]
     end
@@ -25,23 +24,24 @@ graph TB
         DocParser[Document Parser<br/>Docling]
     end
 
-    subgraph External
-        EmbedModel[Embedding Model<br/>Qwen3-Embedding-0.6B]
+    subgraph External Services
+        EmbedModel[Embedding Model<br/>Qwen3-Embedding-0.6B<br/>Google Colab + ngrok]
+        CohereAPI[Cohere Rerank v3.5<br/>API]
         DocSource[Document Sources<br/>PDFs, DOCX, PPTX]
     end
 
     UI --> API
     Filter --> API
     Results --> API
-    Guidance --> API
+    Tips --> API
     API --> Auth
-    API --> RateLimit
     API --> InputVal
-    InputVal --> NLPEngine
-    NLPEngine --> EmbedModel
-    NLPEngine --> Ranker
+    InputVal --> EmbedClient
+    EmbedClient --> EmbedModel
+    EmbedClient --> Ranker
     Ranker --> UnifiedDB
     Ranker --> Reranker
+    Reranker --> CohereAPI
     Ingestion --> UnifiedDB
     Ingestion --> EmbedModel
     Ingestion --> DocParser
