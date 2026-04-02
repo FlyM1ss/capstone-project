@@ -36,13 +36,18 @@ async def upload_document(
         f.write(content)
 
     try:
-        doc, chunk_count = await ingest_document(
+        result = await ingest_document(
             db, file_path, title=title, author=author,
             category=category, access_level=access_level,
         )
+        if result is None:
+            raise HTTPException(status_code=409, detail="Document already exists with identical content")
+        doc, chunk_count = result
         return DocumentUploadResponse(
             document_id=doc.id, title=doc.title, chunks_created=chunk_count,
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ingestion failed: {str(e)}")
 

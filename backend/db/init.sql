@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS documents (
     page_count INTEGER,
     document_group TEXT,
     version INTEGER DEFAULT 1 CHECK (version >= 1),
+    content_hash TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT uq_document_group_version UNIQUE (document_group, version)
 );
