@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ITWS 4100 (IT Capstone) project — an AI-driven company-wide search engine prototype for Deloitte. The system uses NLP with hybrid retrieval (semantic + BM25 keyword search) to let employees search internal resources via natural language queries.
 
-**Tech stack:** Next.js 15 (App Router) + TypeScript + shadcn/ui + Vercel AI SDK frontend, FastAPI backend (Python 3.11), PostgreSQL 16 with pgvector + ParadeDB (unified hybrid search), Qwen3-Embedding-0.6B (1024-dim vectors), Cohere Rerank v3.5, Docling (document parsing), NextAuth.js (auth), Docker Compose deployment.
+**Tech stack:** Next.js 16 (App Router) + TypeScript + shadcn/ui (@base-ui/react primitives) frontend, FastAPI backend (Python 3.11), PostgreSQL 16 with pgvector + ParadeDB (unified hybrid search), Qwen3-Embedding-0.6B (1024-dim vectors), Cohere Rerank v3.5, Docling (document parsing), JWT auth (backend-issued, bcrypt + HS256), Docker Compose deployment.
 
 ## Key Commands
 
@@ -18,6 +18,11 @@ docker compose logs -f backend          # Tail backend logs
 docker compose exec backend python -m app.scripts.ingest_all              # Ingest clean data (sample-docs + auxiliary)
 docker compose exec backend python -m app.scripts.ingest_all --poisoned   # Ingest poisoned data only (adversarial test)
 docker compose exec backend python -m app.scripts.ingest_all --all        # Ingest everything (clean + poisoned)
+docker compose exec backend python -m app.scripts.ingest_all --clean      # Wipe DB + re-ingest clean data
+
+# === Embedding server (local alternative to Colab) ===
+pip install sentence-transformers fastapi uvicorn torch
+python embedding_server.py                                                # Runs on :8001, auto-detects GPU/CPU
 
 # === Backend standalone ===
 cd backend
@@ -55,7 +60,7 @@ Query → Embed (Qwen3, external service) → Parallel retrieval:
 → Version filter (show_latest_only) → RBAC filter → Results
 ```
 
-- **Embedding model** is hosted externally (Google Colab + ngrok). Backend calls it via `EMBEDDING_API_URL`. The endpoint expects `POST {"texts": [...]}` and returns `{"embeddings": [[...]]}`.
+- **Embedding model** runs via `embedding_server.py` (local, auto-detects GPU/CPU) or Google Colab + ngrok. Backend calls it via `EMBEDDING_API_URL` (default `http://localhost:8001/embed`). The endpoint expects `POST {"texts": [...]}` and returns `{"embeddings": [[...]]}`.
 - **Single PostgreSQL instance** (ParadeDB image) handles both vector search and BM25 — no separate vector DB.
 - **Title embeddings** stored in separate `document_title_embeddings` table with its own HNSW index for clean separation from chunk embeddings.
 - **BM25 index** is lazily created after the first document ingestion (`_ensure_bm25_index` in `services/ingestion.py`), not in `init.sql`.
@@ -79,25 +84,27 @@ api/ (FastAPI routers) → services/ (business logic) → models/ (SQLAlchemy OR
 
 - App Router with 3 pages: landing (`/`), search results (`/search`), admin upload (`/admin/upload`)
 - `lib/api.ts` — API client that calls backend via `NEXT_PUBLIC_API_URL`
-- All interactive components use `"use client"` directive
-- UI: shadcn/ui components + Tailwind CSS 4 + Geist font
+- 5 custom components (`search-bar`, `result-card`, `filter-panel`, `file-upload`, `search-tips`) + shadcn/ui primitives
+- UI: shadcn/ui components (@base-ui/react, not Radix) + Tailwind CSS 4 + Geist font + lucide-react icons
 
 ### Auth
 
-- JWT tokens (HS256, 60min expiry) with 3 roles:
+- **Backend JWT auth** (`services/auth.py`): bcrypt password hashing + HS256 JWT tokens (60min expiry)
+- 3 roles with RBAC filtering in search:
   - `analyst` → public docs only
   - `manager` → public + internal
   - `admin` → public + internal + confidential + upload
 - **Currently bypassed**: search endpoint hardcodes `user_role = "admin"` for demo purposes
+- `next-auth` is installed in the frontend but not wired up (no config, no API routes, no middleware)
 - Demo users: `admin@deloitte.com` / `manager@deloitte.com` / `analyst@deloitte.com` (password: `password123`)
 
 ### Docker Services
 
 | Service    | Image/Build       | Port | Notes                                      |
 |------------|-------------------|------|--------------------------------------------|
-| `db`       | paradedb/paradedb  | 5432 | Runs `backend/db/init.sql` on first start  |
-| `backend`  | `./backend`       | 8000 | Volume-mounts `./backend` for hot reload   |
-| `frontend` | `./frontend`      | 3000 | Volume-mounts `./frontend` for hot reload  |
+| `db`       | paradedb/paradedb  | 5432 | Runs `backend/db/init.sql` on first start, `pgdata` volume  |
+| `backend`  | `./backend`       | 8000 | Mounts `./backend` + `./data:/data` + `model_cache` volume  |
+| `frontend` | `./frontend`      | 3000 | Bun-based dev container, mounts `./frontend`  |
 
 ## Secrets
 
