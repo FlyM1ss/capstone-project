@@ -13,6 +13,6 @@
   padding: 40px 48px;
 
   &.mainExpanded {
-    margin-left: 0;
+    margin-left: $sidebar-collapsed-width;
   }
 }

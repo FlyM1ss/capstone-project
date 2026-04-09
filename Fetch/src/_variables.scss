@@ -44,7 +44,8 @@ $border-radius-full: 9999px;
 
 $header-height: 60px;
 $sidebar-width: 280px;
-$sidebar-collapsed-width: 0px;
+// Narrow rail so the collapse control stays visible when the panel is hidden
+$sidebar-collapsed-width: 48px;
 $transition-speed: 0.25s;
 $transition-easing: ease-in-out;
 

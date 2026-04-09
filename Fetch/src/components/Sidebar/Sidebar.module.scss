@@ -6,33 +6,54 @@
   left: 0;
   bottom: 0;
   width: $sidebar-width;
-  overflow: hidden;
-  transition: width $transition-speed $transition-easing,
-    opacity $transition-speed $transition-easing;
-  z-index: 100;
-
-  &.collapsed {
-    width: 0;
-    opacity: 0;
-  }
-}
-
-.inner {
-  width: $sidebar-width;
-  height: 100%;
-  background-color: $bg-sidebar;
-  border-top: 1px solid $border-color;
-  border-right: 1px solid $border-color;
-  border-top-right-radius: $border-radius-md;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  transition: width $transition-speed $transition-easing;
+  z-index: 100;
+  background-color: $bg-sidebar;
+  border-top-right-radius: $border-radius-md;
+
+  &.collapsed {
+    width: $sidebar-collapsed-width;
+
+    .toggleRow {
+      flex: 1;
+      justify-content: center;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+
+    .inner {
+      flex: 0 0 0;
+      min-height: 0;
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      pointer-events: none;
+      visibility: hidden;
+    }
+  }
 }
 
 .toggleRow {
   display: flex;
-  align-items: center;
-  padding: 12px 12px 4px;
+  align-items: flex-start;
+  justify-content: flex-start;
   flex-shrink: 0;
+  padding: 10px 12px 6px;
+}
+
+.inner {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+  transition: opacity $transition-speed $transition-easing,
+    flex $transition-speed $transition-easing,
+    min-height $transition-speed $transition-easing;
 }
 
 .toggleBtn {
@@ -41,6 +62,11 @@
   justify-content: center;
   width: 32px;
   height: 32px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
   border-radius: $border-radius-sm;
   color: $text-secondary;
   transition: background-color $transition-speed $transition-easing,
@@ -54,8 +80,9 @@
 
 .content {
   flex: 1;
+  overflow-x: hidden;
   overflow-y: auto;
-  padding: 4px 0 24px;
+  padding: 0 0 24px;
 
   scrollbar-width: thin;
   scrollbar-color: $border-color transparent;
@@ -80,14 +107,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px 4px;
+  padding: 6px 12px 4px;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: $text-secondary;
-  position: sticky;
-  top: 0;
-  background-color: $bg-sidebar;
-  z-index: 1;
 }

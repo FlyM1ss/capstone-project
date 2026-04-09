@@ -2,7 +2,7 @@
 
 .card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   text-decoration: none;
   gap: 10px;
   padding: 8px 12px;
@@ -19,6 +19,7 @@
 .thumbnail {
   width: 36px;
   height: 36px;
+  margin-top: 1px;
   border-radius: $border-radius-xs;
   background-color: $bg-avatar-placeholder;
   flex-shrink: 0;
@@ -27,12 +28,15 @@
 .info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: flex-start;
+  gap: 6px;
   min-width: 0;
   flex: 1;
 }
 
 .name {
+  align-self: stretch;
+  min-width: 0;
   font-size: 13px;
   font-weight: 500;
   color: $text-primary;

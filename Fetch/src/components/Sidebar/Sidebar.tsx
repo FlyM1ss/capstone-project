@@ -22,22 +22,24 @@ export default function Sidebar({ isOpen, onToggle }: Props) {
 
   return (
     <aside className={`${styles.sidebar} ${!isOpen ? styles.collapsed : ''}`}>
-      <div className={styles.inner}>
-        {/* Collapse toggle at top of sidebar */}
-        <div className={styles.toggleRow}>
-          <button
-            className={styles.toggleBtn}
-            onClick={onToggle}
-            aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-        </div>
+      <div className={styles.toggleRow}>
+        <button
+          type="button"
+          className={styles.toggleBtn}
+          onClick={onToggle}
+          aria-expanded={isOpen}
+          aria-controls="sidebar-panel"
+          aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+      </div>
 
+      <div id="sidebar-panel" className={styles.inner}>
         <div className={styles.content}>
           {/* Pinned section */}
           <section className={styles.section}>
