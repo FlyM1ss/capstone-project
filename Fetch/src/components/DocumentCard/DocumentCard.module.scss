@@ -12,7 +12,7 @@
   position: relative;
 
   &:hover {
-    background-color: $bg-hover;
+    background-color: var(--bg-hover);
   }
 }
 
@@ -21,7 +21,7 @@
   height: 36px;
   margin-top: 1px;
   border-radius: $border-radius-xs;
-  background-color: $bg-avatar-placeholder;
+  background-color: var(--bg-avatar-placeholder);
   flex-shrink: 0;
 }
 
@@ -39,7 +39,7 @@
   min-width: 0;
   font-size: 13px;
   font-weight: 500;
-  color: $text-primary;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -47,7 +47,7 @@
 
 .meta {
   font-size: 11px;
-  color: $text-secondary;
+  color: var(--text-secondary);
 }
 
 .pin {

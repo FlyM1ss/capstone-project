@@ -11,42 +11,42 @@
   gap: 6px;
   padding: 7px 12px;
   border-radius: $border-radius-full;
-  background-color: $bg-chip;
-  color: $text-primary;
+  background-color: var(--bg-chip);
+  color: var(--text-primary);
   font-size: 13px;
   font-weight: 500;
-  border: 1px solid $border-color;
+  border: 1px solid var(--border-color);
   transition: background-color $transition-speed $transition-easing,
     border-color $transition-speed $transition-easing;
   white-space: nowrap;
 
   &:hover {
-    background-color: $bg-hover;
-    border-color: $border-color-light;
+    background-color: var(--bg-hover);
+    border-color: var(--border-color-light);
   }
 
   &.active {
-    border-color: $text-accent;
+    border-color: var(--text-accent);
   }
 
   &.open {
-    background-color: $bg-hover;
-    border-color: $border-color-light;
+    background-color: var(--bg-hover);
+    border-color: var(--border-color-light);
   }
 }
 
 .icon {
   display: flex;
   align-items: center;
-  color: $text-secondary;
+  color: var(--text-secondary);
 }
 
 .label {
-  color: $text-primary;
+  color: var(--text-primary);
 }
 
 .caret {
-  color: $text-secondary;
+  color: var(--text-secondary);
   transition: transform $transition-speed $transition-easing;
   flex-shrink: 0;
 }
@@ -60,10 +60,10 @@
   top: calc(100% + 6px);
   left: 0;
   min-width: 200px;
-  background-color: $bg-dropdown;
-  border: 1px solid $border-color-light;
+  background-color: var(--bg-dropdown);
+  border: 1px solid var(--border-color-light);
   border-radius: $border-radius-md;
-  box-shadow: $shadow-dropdown;
+  box-shadow: var(--shadow-dropdown);
   padding: 12px;
   z-index: 100;
 }

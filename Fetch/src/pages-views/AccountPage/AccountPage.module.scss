@@ -10,13 +10,13 @@
 .pageTitle {
   font-size: 24px;
   font-weight: 700;
-  color: $text-primary;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
 }
 
 .card {
-  background-color: $bg-card;
-  border: 1px solid $border-color;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: $border-radius-md;
   padding: 24px;
 }
@@ -32,13 +32,13 @@
   width: 72px;
   height: 72px;
   border-radius: $border-radius-full;
-  background-color: $bg-avatar-placeholder;
+  background-color: var(--bg-avatar-placeholder);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
-  border: 2px solid $border-color-light;
+  border: 2px solid var(--border-color-light);
 }
 
 .avatarImg {
@@ -50,7 +50,7 @@
 .avatarInitials {
   font-size: 22px;
   font-weight: 700;
-  color: $text-primary;
+  color: var(--text-primary);
   text-transform: uppercase;
 }
 
@@ -63,22 +63,22 @@
 .name {
   font-size: 20px;
   font-weight: 600;
-  color: $text-primary;
+  color: var(--text-primary);
 }
 
 .title {
   font-size: 14px;
-  color: $text-secondary;
+  color: var(--text-secondary);
 }
 
 .department {
   font-size: 13px;
-  color: $text-muted;
+  color: var(--text-muted);
 }
 
 .divider {
   height: 1px;
-  background-color: $border-color;
+  background-color: var(--border-color);
   margin-bottom: 20px;
 }
 
@@ -97,20 +97,20 @@
 
 .fieldLabel {
   font-size: 13px;
-  color: $text-secondary;
+  color: var(--text-secondary);
   min-width: 100px;
 }
 
 .fieldValue {
   font-size: 13px;
-  color: $text-primary;
+  color: var(--text-primary);
   text-align: right;
 }
 
 .sectionTitle {
   font-size: 15px;
   font-weight: 600;
-  color: $text-primary;
+  color: var(--text-primary);
   margin-bottom: 16px;
 }
 
@@ -130,13 +130,13 @@
 .prefLabel {
   font-size: 13px;
   font-weight: 500;
-  color: $text-primary;
+  color: var(--text-primary);
   margin-bottom: 2px;
 }
 
 .prefDescription {
   font-size: 12px;
-  color: $text-secondary;
+  color: var(--text-secondary);
 }
 
 // Toggle switch
@@ -144,7 +144,7 @@
   width: 40px;
   height: 22px;
   border-radius: $border-radius-full;
-  background-color: $border-color;
+  background-color: var(--border-color);
   padding: 2px;
   display: flex;
   align-items: center;
@@ -154,7 +154,7 @@
   opacity: 0.7;
 
   &.toggleOn {
-    background-color: $text-accent;
+    background-color: var(--text-accent);
     justify-content: flex-end;
   }
 }
@@ -163,6 +163,6 @@
   width: 18px;
   height: 18px;
   border-radius: $border-radius-full;
-  background-color: $text-primary;
+  background-color: var(--text-primary);
   flex-shrink: 0;
 }

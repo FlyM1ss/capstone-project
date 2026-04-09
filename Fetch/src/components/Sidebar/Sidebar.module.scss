@@ -11,7 +11,7 @@
   overflow: hidden;
   transition: width $transition-speed $transition-easing;
   z-index: 100;
-  background-color: $bg-sidebar;
+  background-color: var(--bg-sidebar);
   border-top-right-radius: $border-radius-md;
 
   &.collapsed {
@@ -68,13 +68,13 @@
   background: transparent;
   cursor: pointer;
   border-radius: $border-radius-sm;
-  color: $text-secondary;
+  color: var(--text-secondary);
   transition: background-color $transition-speed $transition-easing,
     color $transition-speed $transition-easing;
 
   &:hover {
-    background-color: $bg-hover;
-    color: $text-primary;
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
   }
 }
 
@@ -85,7 +85,7 @@
   padding: 0 0 24px;
 
   scrollbar-width: thin;
-  scrollbar-color: $border-color transparent;
+  scrollbar-color: var(--border-color) transparent;
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -94,7 +94,7 @@
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background-color: $border-color;
+    background-color: var(--border-color);
     border-radius: $border-radius-full;
   }
 }
@@ -112,5 +112,5 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: $text-secondary;
+  color: var(--text-secondary);
 }

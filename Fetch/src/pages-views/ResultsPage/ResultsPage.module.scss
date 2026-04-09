@@ -28,7 +28,7 @@
 
 .resultCount {
   font-size: 13px;
-  color: $text-secondary;
+  color: var(--text-secondary);
 }
 
 .resultsList {
@@ -41,15 +41,15 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  color: $text-secondary;
+  color: var(--text-secondary);
   padding: 40px 0;
 }
 
 .spinner {
   width: 20px;
   height: 20px;
-  border: 2px solid $border-color;
-  border-top-color: $text-accent;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--text-accent);
   border-radius: $border-radius-full;
   animation: spin 0.7s linear infinite;
 }
@@ -68,10 +68,10 @@
 .emptyTitle {
   font-size: 18px;
   font-weight: 600;
-  color: $text-primary;
+  color: var(--text-primary);
 }
 
 .emptyText {
   font-size: 14px;
-  color: $text-secondary;
+  color: var(--text-secondary);
 }

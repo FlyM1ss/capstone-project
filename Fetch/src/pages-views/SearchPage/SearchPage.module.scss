@@ -40,15 +40,15 @@
   width: 38px;
   height: 38px;
   border-radius: $border-radius-full;
-  background-color: $bg-chip;
-  border: 1px solid $border-color;
-  color: $text-secondary;
+  background-color: var(--bg-chip);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
   margin-left: auto;
   transition: background-color $transition-speed $transition-easing,
     color $transition-speed $transition-easing;
 
   &:hover {
-    background-color: $bg-hover;
-    color: $text-primary;
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
   }
 }

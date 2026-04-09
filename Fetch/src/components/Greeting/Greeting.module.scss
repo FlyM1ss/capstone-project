@@ -3,10 +3,10 @@
 .greeting {
   font-size: 36px;
   font-weight: 700;
-  color: $text-primary;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
 }
 
 .name {
-  color: $text-accent;
+  color: var(--text-accent);
 }
