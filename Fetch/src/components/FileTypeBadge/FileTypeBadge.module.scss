@@ -1,0 +1,26 @@
+@use '@/_variables.scss' as *;
+
+.badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: $border-radius-full;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.pptx {
+  background-color: $badge-pptx-bg;
+  color: $badge-pptx-text;
+}
+
+.docx {
+  background-color: $badge-docx-bg;
+  color: $badge-docx-text;
+}
+
+.pdf {
+  background-color: $badge-pdf-bg;
+  color: $badge-pdf-text;
+}

@@ -1,0 +1,93 @@
+@use '@/_variables.scss' as *;
+
+.sidebar {
+  position: fixed;
+  top: $header-height;
+  left: 0;
+  bottom: 0;
+  width: $sidebar-width;
+  overflow: hidden;
+  transition: width $transition-speed $transition-easing,
+    opacity $transition-speed $transition-easing;
+  z-index: 100;
+
+  &.collapsed {
+    width: 0;
+    opacity: 0;
+  }
+}
+
+.inner {
+  width: $sidebar-width;
+  height: 100%;
+  background-color: $bg-sidebar;
+  border-top: 1px solid $border-color;
+  border-right: 1px solid $border-color;
+  border-top-right-radius: $border-radius-md;
+  display: flex;
+  flex-direction: column;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px 4px;
+  flex-shrink: 0;
+}
+
+.toggleBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: $border-radius-sm;
+  color: $text-secondary;
+  transition: background-color $transition-speed $transition-easing,
+    color $transition-speed $transition-easing;
+
+  &:hover {
+    background-color: $bg-hover;
+    color: $text-primary;
+  }
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0 24px;
+
+  scrollbar-width: thin;
+  scrollbar-color: $border-color transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: $border-color;
+    border-radius: $border-radius-full;
+  }
+}
+
+.section {
+  margin-bottom: 8px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: $text-secondary;
+  position: sticky;
+  top: 0;
+  background-color: $bg-sidebar;
+  z-index: 1;
+}

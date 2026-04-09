@@ -1,0 +1,18 @@
+@use '@/_variables.scss' as *;
+
+.root {
+  min-height: 100vh;
+  background-color: $bg-primary;
+}
+
+.main {
+  margin-top: $header-height;
+  margin-left: $sidebar-width;
+  min-height: calc(100vh - #{$header-height});
+  transition: margin-left $transition-speed $transition-easing;
+  padding: 40px 48px;
+
+  &.mainExpanded {
+    margin-left: 0;
+  }
+}
