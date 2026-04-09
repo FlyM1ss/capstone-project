@@ -11,14 +11,11 @@ graph TB
         subgraph Backend Container
             FastAPI[FastAPI Application<br/>Python 3.11+<br/>Uvicorn ASGI Server]
             DocProc[Document Processor<br/>Docling]
+            JWTAuth[JWT Authentication<br/>3-Tier RBAC<br/>bcrypt + HS256]
         end
 
         subgraph Database Container
             PG[(PostgreSQL 16<br/>pgvector + ParadeDB<br/>Hybrid Search<br/>Metadata + Query Logs)]
-        end
-
-        subgraph Auth Layer
-            NextAuth[JWT Authentication<br/>3-Tier RBAC<br/>bcrypt + HS256]
         end
     end
 
@@ -27,10 +24,10 @@ graph TB
         CohereRerank[Cohere Rerank v3.5<br/>Result Reranking]
     end
 
-    Browser -->|HTTPS| NextApp
+    Browser -->|HTTP| NextApp
     NextApp -->|HTTP / REST API| FastAPI
     FastAPI -->|SQL / pgvector / ParadeDB| PG
     FastAPI -->|HTTPS| CohereRerank
-    FastAPI -->|HTTPS| EmbedAPI
+    FastAPI -->|HTTP| EmbedAPI
     FastAPI --> DocProc
-    FastAPI -->|JWT Auth| NextAuth
+    FastAPI --> JWTAuth

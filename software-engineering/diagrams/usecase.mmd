@@ -4,7 +4,7 @@ graph LR
         UC2["Search for Information<br/>Within Documents"]
         UC3["Filter and Refine<br/>Search Results"]
         UC4["Ingest and Index<br/>Documents"]
-        UC5["Manage Query<br/>Boundaries"]
+        UC5["Authenticate and<br/>Manage Access"]
     end
 
     Employee((Deloitte<br/>Employee))
@@ -13,6 +13,7 @@ graph LR
     Employee --> UC1
     Employee --> UC2
     Employee --> UC3
+    Employee --> UC5
     Admin --> UC4
     Admin --> UC5
 

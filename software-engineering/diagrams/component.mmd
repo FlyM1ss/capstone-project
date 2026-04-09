@@ -1,8 +1,9 @@
 graph TB
     subgraph Frontend Layer
-        UI[Search Interface<br/>Next.js + TypeScript]
+        SearchBar[Search Bar<br/>Component]
         Filter[Filter Panel<br/>Component]
         Results[Results Display<br/>Component]
+        FileUpload[File Upload<br/>Component]
         Tips[Search Tips<br/>Component]
     end
 
@@ -14,14 +15,13 @@ graph TB
     subgraph Processing Layer
         InputVal[Input Validator<br/>and Content Filter]
         EmbedClient[Embedding Client<br/>HTTP to External Model]
+        SearchSvc[Search Service<br/>Hybrid Search + RRF Merge]
         Reranker[Reranker<br/>Cohere Rerank v3.5]
-        Ranker[Ranking Service<br/>RRF Merge + Re-rank]
     end
 
     subgraph Data Layer
         UnifiedDB[(PostgreSQL 16<br/>pgvector + ParadeDB<br/>Hybrid Search)]
         Ingestion[Document Ingestion<br/>Pipeline]
-        DocParser[Document Parser<br/>Docling]
     end
 
     subgraph External Services
@@ -30,19 +30,18 @@ graph TB
         DocSource[Document Sources<br/>PDFs, DOCX, PPTX]
     end
 
-    UI --> API
+    SearchBar --> API
     Filter --> API
     Results --> API
-    Tips --> API
+    FileUpload --> API
     API --> Auth
     API --> InputVal
-    InputVal --> EmbedClient
+    InputVal --> SearchSvc
+    SearchSvc --> EmbedClient
     EmbedClient --> EmbedModel
-    EmbedClient --> Ranker
-    Ranker --> UnifiedDB
-    Ranker --> Reranker
+    SearchSvc --> UnifiedDB
+    SearchSvc --> Reranker
     Reranker --> CohereAPI
     Ingestion --> UnifiedDB
-    Ingestion --> EmbedModel
-    Ingestion --> DocParser
-    DocSource --> DocParser
+    Ingestion --> EmbedClient
+    DocSource --> Ingestion

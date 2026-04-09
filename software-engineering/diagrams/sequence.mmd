@@ -5,7 +5,6 @@ sequenceDiagram
     participant Val as Input Validator
     participant Embed as Embedding Service<br/>(Qwen3-Embedding-0.6B)
     participant DB as PostgreSQL<br/>(pgvector + ParadeDB)
-    participant Rank as Ranking Service
     participant RR as Cohere Rerank v3.5
 
     User->>UI: Enter search query
@@ -32,10 +31,13 @@ sequenceDiagram
             DB-->>API: title_results[]
         end
 
-        API->>Rank: rrf_merge(semantic, keyword, title, title_boost=1.5x)
-        Rank-->>API: merged_results[top 50]
-        API->>RR: rerank(query, merged_results)
+        Note over API: rrf_merge(semantic, keyword, title,<br/>title_boost=1.5x) → merged[top 50]
+        API->>RR: rerank(query, merged_results, top_n=10)
         RR-->>API: reranked_results[top 10]
-        API-->>UI: 200 OK + reranked_results[]
+        Note over API: filter by RBAC access level
+        Note over API: filter by version (show latest only)
+        API->>DB: batch fetch document metadata
+        DB-->>API: document records[]
+        API-->>UI: 200 OK + results[]
         UI-->>User: Display results (title, snippet, author, date, type)
     end
