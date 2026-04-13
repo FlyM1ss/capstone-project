@@ -5,7 +5,7 @@ from app.core.config import settings
 
 async def generate_embeddings(texts: list[str]) -> list[list[float]]:
     """Call the embedding service (Colab or local) to generate vectors."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         response = await client.post(
             settings.EMBEDDING_API_URL,
             json={"texts": texts},

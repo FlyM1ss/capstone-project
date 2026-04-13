@@ -12,17 +12,17 @@ ITWS 4100 (IT Capstone) project — an AI-driven company-wide search engine prot
 
 ```bash
 # === Full stack (Docker) ===
-docker compose up -d                    # Start all 3 services (db, backend, frontend)
+docker compose up -d                    # Start all 4 services (db, embedding, backend, frontend)
+                                        # First run: downloads embedding model (~600MB) + auto-ingests documents
+                                        # Subsequent runs: starts in ~30s, skips ingestion
+docker compose up -d --build            # Rebuild images (only needed after requirements.txt/package.json changes)
 docker compose down                     # Stop all services
-docker compose logs -f backend          # Tail backend logs
-docker compose exec backend python -m app.scripts.ingest_all              # Ingest clean data (sample-docs + auxiliary)
+docker compose down -v                  # Stop all services + delete all data (fresh start)
+docker compose logs -f backend          # Tail backend logs (shows ingestion progress)
+docker compose exec backend python -m app.scripts.ingest_all              # Re-ingest clean data (manual)
 docker compose exec backend python -m app.scripts.ingest_all --poisoned   # Ingest poisoned data only (adversarial test)
 docker compose exec backend python -m app.scripts.ingest_all --all        # Ingest everything (clean + poisoned)
 docker compose exec backend python -m app.scripts.ingest_all --clean      # Wipe DB + re-ingest clean data
-
-# === Embedding server (local alternative to Colab) ===
-pip install sentence-transformers fastapi uvicorn torch
-python embedding_server.py                                                # Runs on :8001, auto-detects GPU/CPU
 
 # === Backend standalone ===
 cd backend
@@ -60,7 +60,7 @@ Query → Embed (Qwen3, external service) → Parallel retrieval:
 → Version filter (show_latest_only) → RBAC filter → Results
 ```
 
-- **Embedding model** runs via `embedding_server.py` (local, auto-detects GPU/CPU) or Google Colab + ngrok. Backend calls it via `EMBEDDING_API_URL` (default `http://localhost:8001/embed`). The endpoint expects `POST {"texts": [...]}` and returns `{"embeddings": [[...]]}`.
+- **Embedding model** runs as the `embedding` Docker service (CPU-only, auto-starts with `docker compose up`). Backend calls it via `EMBEDDING_API_URL` (default `http://embedding:8001/embed` inside Docker). The endpoint expects `POST {"texts": [...]}` and returns `{"embeddings": [[...]]}`. For standalone dev, override to `http://localhost:8001/embed`.
 - **Single PostgreSQL instance** (ParadeDB image) handles both vector search and BM25 — no separate vector DB.
 - **Title embeddings** stored in separate `document_title_embeddings` table with its own HNSW index for clean separation from chunk embeddings.
 - **BM25 index** is lazily created after the first document ingestion (`_ensure_bm25_index` in `services/ingestion.py`), not in `init.sql`.
@@ -100,11 +100,12 @@ api/ (FastAPI routers) → services/ (business logic) → models/ (SQLAlchemy OR
 
 ### Docker Services
 
-| Service    | Image/Build       | Port | Notes                                      |
-|------------|-------------------|------|--------------------------------------------|
-| `db`       | paradedb/paradedb  | 5432 | Runs `backend/db/init.sql` on first start, `pgdata` volume  |
-| `backend`  | `./backend`       | 8000 | Mounts `./backend` + `./data:/data` + `model_cache` volume  |
-| `frontend` | `./frontend`      | 3000 | Bun-based dev container, mounts `./frontend`  |
+| Service     | Image/Build        | Port | Notes                                                      |
+|-------------|-------------------|------|--------------------------------------------------------------|
+| `db`        | paradedb/paradedb  | 5432 | Runs `init.sql` on first start, `pgdata` volume             |
+| `embedding` | `./embedding.Dockerfile` | 8001 | CPU-only PyTorch, Qwen3-Embedding-0.6B, `hf_cache` volume   |
+| `backend`   | `./backend`        | 8000 | Auto-ingests on first start, mounts `./data`                 |
+| `frontend`  | `./Fetch`          | 3000 | Bun-based dev container                                      |
 
 ## Secrets
 
