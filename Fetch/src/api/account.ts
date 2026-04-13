@@ -1,7 +1,16 @@
 import { UserProfile } from '@/types';
-import { apiGet } from './client';
-import { mockUser } from '@/data/mockData';
 
-export async function getUserProfile(): Promise<UserProfile> {
-  return apiGet<UserProfile>('/account/profile', mockUser);
+// Demo user for prototype (no auth wired up yet).
+// When auth is implemented, this will call GET /api/auth/me with a JWT token.
+const DEMO_USER: UserProfile = {
+  id: 'demo-admin',
+  name: 'Admin User',
+  firstName: 'Admin',
+  email: 'admin@deloitte.com',
+  department: 'Technology',
+  title: 'Administrator',
+};
+
+export function getDemoUser(): UserProfile {
+  return DEMO_USER;
 }

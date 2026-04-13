@@ -46,7 +46,7 @@ export default function SearchPage() {
               onSetAuthorized={setAuthorized}
             />
 
-            <button className={styles.voiceButton} type="button" aria-label="Voice search">
+            <button className={styles.voiceButton} type="button" aria-label="Voice search (coming soon)" disabled style={{ opacity: 0.4, cursor: 'not-allowed' }}>
               <svg width="18" height="18" viewBox="0 0 98 98" fill="none" stroke="currentColor" strokeWidth="13.3333" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M8.167 40.833V53.083M24.5 24.5V69.417M40.834 12.25V85.75M57.167 32.667V61.25M73.5 20.417V73.5M89.834 40.833V53.083" />
               </svg>

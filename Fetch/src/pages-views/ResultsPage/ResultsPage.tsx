@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Document, FileType, SearchFilters } from '@/types';
 import { searchDocuments } from '@/api/search';
@@ -18,7 +18,8 @@ export default function ResultsPage() {
 
   const [results, setResults] = useState<Document[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const activeTypes: FileType[] = typesParam
     ? (typesParam.split(',') as FileType[])
@@ -32,13 +33,19 @@ export default function ResultsPage() {
 
   useEffect(() => {
     if (!query) return;
-    setLoading(true);
-    searchDocuments({ query, filters })
-      .then((res) => {
+    startTransition(async () => {
+      try {
+        const res = await searchDocuments({ query, filters });
         setResults(res.results);
         setTotalCount(res.totalCount);
-      })
-      .finally(() => setLoading(false));
+        setError(null);
+      } catch (err) {
+        console.error('Search failed:', err);
+        setError('Search failed. Make sure the backend is running.');
+        setResults([]);
+        setTotalCount(0);
+      }
+    });
   }, [query, typesParam, dateStart, dateEnd, authorizedParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function updateParams(updates: Record<string, string | null>) {
@@ -83,10 +90,15 @@ export default function ResultsPage() {
       </div>
 
       <div className={styles.resultsArea}>
-        {loading ? (
+        {isPending ? (
           <div className={styles.loading}>
             <div className={styles.spinner} />
             <span>Searching...</span>
+          </div>
+        ) : error ? (
+          <div className={styles.empty}>
+            <p className={styles.emptyTitle}>Connection Error</p>
+            <p className={styles.emptyText}>{error}</p>
           </div>
         ) : results.length > 0 ? (
           <>

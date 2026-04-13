@@ -2,7 +2,10 @@ import { useEffect, useRef, RefObject } from 'react';
 
 export function useClickOutside(ref: RefObject<HTMLElement | null>, handler: () => void) {
   const handlerRef = useRef(handler);
-  handlerRef.current = handler;
+
+  useEffect(() => {
+    handlerRef.current = handler;
+  });
 
   useEffect(() => {
     function listener(event: MouseEvent | TouchEvent) {
@@ -15,5 +18,5 @@ export function useClickOutside(ref: RefObject<HTMLElement | null>, handler: () 
       document.removeEventListener('mousedown', listener);
       document.removeEventListener('touchstart', listener);
     };
-  }, [ref]); // handler excluded — stored in ref to avoid re-registering listeners on every render
+  }, [ref]);
 }

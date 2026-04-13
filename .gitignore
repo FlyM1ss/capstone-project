@@ -77,3 +77,7 @@ data/*
 !data/poisoned
 !data/sample
 elasticsearch-data/
+
+# ===== Generated Reports =====
+final-report/*.pdf
+final-report/*.docx

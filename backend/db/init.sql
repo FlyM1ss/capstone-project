@@ -83,9 +83,9 @@ CREATE INDEX IF NOT EXISTS idx_title_embeddings_vector
 
 -- Seed demo users
 INSERT INTO users (email, name, hashed_password, role) VALUES
-    ('admin@deloitte.com', 'Admin User', '$2b$12$LJ3m4ys3Lk0YGFQhKEBzfOWMiR8JRjGjC1y6iYqDBsXcJx3wqFBi', 'admin'),
-    ('manager@deloitte.com', 'Manager User', '$2b$12$LJ3m4ys3Lk0YGFQhKEBzfOWMiR8JRjGjC1y6iYqDBsXcJx3wqFBi', 'manager'),
-    ('analyst@deloitte.com', 'Analyst User', '$2b$12$LJ3m4ys3Lk0YGFQhKEBzfOWMiR8JRjGjC1y6iYqDBsXcJx3wqFBi', 'analyst')
+    ('admin@deloitte.com', 'Admin User', '$2b$12$cRTowAa9DpbmZLmsMhKR6OzgjLxtaMptJ96DjxxgeRL/cx.kE/PcK', 'admin'),
+    ('manager@deloitte.com', 'Manager User', '$2b$12$cRTowAa9DpbmZLmsMhKR6OzgjLxtaMptJ96DjxxgeRL/cx.kE/PcK', 'manager'),
+    ('analyst@deloitte.com', 'Analyst User', '$2b$12$cRTowAa9DpbmZLmsMhKR6OzgjLxtaMptJ96DjxxgeRL/cx.kE/PcK', 'analyst')
 ON CONFLICT (email) DO NOTHING;
 -- All demo passwords: "password123"
 

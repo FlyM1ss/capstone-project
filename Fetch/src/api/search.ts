@@ -1,6 +1,5 @@
 import { Document, FileType, SearchFilters, SearchRequest, SearchResponse } from '@/types';
 import { apiPost } from './client';
-import { mockSearchResults } from '@/data/mockData';
 
 // Backend response types (snake_case from FastAPI)
 interface BackendSearchResultItem {
@@ -48,10 +47,17 @@ function toDocument(item: BackendSearchResultItem): Document {
 function buildBackendFilters(filters: SearchFilters): Record<string, string> | undefined {
   const out: Record<string, string> = {};
 
+  // Access level filter
   if (filters.authorized === 'public-only') {
     out.access_level = 'public';
   } else if (filters.authorized === 'authorized-only') {
     out.access_level = 'internal';
+  }
+
+  // File type filter: only send if not all types are selected
+  const allTypes: FileType[] = ['pptx', 'pdf', 'docx'];
+  if (filters.types.length > 0 && filters.types.length < allTypes.length) {
+    out.doc_type = filters.types.join(',');
   }
 
   return Object.keys(out).length ? out : undefined;
@@ -64,18 +70,24 @@ export async function searchDocuments(req: SearchRequest): Promise<SearchRespons
     show_latest_only: true,
   };
 
-  const raw = await apiPost<BackendSearchResponse | null>(
-    '/api/search',
-    backendReq,
-    null
-  );
+  const raw = await apiPost<BackendSearchResponse>('/api/search', backendReq);
 
-  if (!raw) {
-    return mockSearchResults;
+  // Client-side date range filtering (backend doesn't support date range filter natively)
+  let results = raw.results.map(toDocument);
+
+  if (req.filters.dateRange?.start || req.filters.dateRange?.end) {
+    const start = req.filters.dateRange.start ? new Date(req.filters.dateRange.start) : null;
+    const end = req.filters.dateRange.end ? new Date(req.filters.dateRange.end) : null;
+    results = results.filter((doc) => {
+      const docDate = new Date(doc.editedAt);
+      if (start && docDate < start) return false;
+      if (end && docDate > end) return false;
+      return true;
+    });
   }
 
   return {
-    results: raw.results.map(toDocument),
-    totalCount: raw.total,
+    results,
+    totalCount: results.length,
   };
 }

@@ -9,16 +9,14 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('dark');
+function getInitialTheme(): Theme {
+  if (typeof window === 'undefined') return 'dark';
+  const saved = localStorage.getItem('fetch-theme');
+  return saved === 'light' ? 'light' : 'dark';
+}
 
-  // Read saved theme on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('fetch-theme') as Theme | null;
-    if (saved === 'light' || saved === 'dark') {
-      setTheme(saved);
-    }
-  }, []);
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
   // Sync data-theme attribute whenever theme changes
   useEffect(() => {
