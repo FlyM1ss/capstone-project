@@ -6,9 +6,6 @@ from app.core.deps import get_db_session
 
 router = APIRouter()
 
-# Module-level ingestion state — updated by the auto-ingest background task in main.py
-ingestion_status: dict = {"state": "idle", "done": 0, "total": 0}
-
 
 @router.get("/health")
 async def health_check(db: AsyncSession = Depends(get_db_session)):
@@ -21,5 +18,4 @@ async def health_check(db: AsyncSession = Depends(get_db_session)):
     return {
         "status": "ok",
         "database": db_status,
-        "ingestion": ingestion_status,
     }

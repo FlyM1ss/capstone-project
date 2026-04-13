@@ -13,8 +13,8 @@ ITWS 4100 (IT Capstone) project — an AI-driven company-wide search engine prot
 ```bash
 # === Full stack (Docker) ===
 docker compose up -d                    # Start all 4 services (db, embedding, backend, frontend)
-                                        # First run: downloads embedding model (~600MB) + auto-ingests documents
-                                        # Subsequent runs: starts in ~30s, skips ingestion
+                                        # First run: downloads embedding model (~600MB)
+                                        # Does NOT auto-ingest; run ingest_all manually after first start
 docker compose up -d --build            # Rebuild images (only needed after requirements.txt/package.json changes)
 docker compose down                     # Stop all services
 docker compose down -v                  # Stop all services + delete all data (fresh start)
