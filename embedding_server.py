@@ -1,4 +1,5 @@
 """Local embedding server using Qwen3-Embedding-0.6B (auto-detects GPU/CPU)."""
+import asyncio
 import signal
 import sys
 from contextlib import asynccontextmanager
@@ -36,7 +37,9 @@ class EmbedRequest(BaseModel):
 
 @app.post("/embed")
 async def embed(req: EmbedRequest):
-    embeddings = model.encode(req.texts, normalize_embeddings=True, show_progress_bar=False)
+    embeddings = await asyncio.to_thread(
+        model.encode, req.texts, normalize_embeddings=True, show_progress_bar=False
+    )
     return {"embeddings": embeddings.tolist()}
 
 

@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     CHUNK_SIZE: int = 512
     CHUNK_OVERLAP: int = 50
     TITLE_BOOST_WEIGHT: float = 1.5
+    EMBED_BATCH_SIZE: int = 64
 
     class Config:
         env_file = ".env"

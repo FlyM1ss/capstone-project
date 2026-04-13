@@ -60,13 +60,13 @@ Query → Embed (Qwen3, external service) → Parallel retrieval:
 → Version filter (show_latest_only) → RBAC filter → Results
 ```
 
-- **Embedding model** runs as the `embedding` Docker service (CPU-only, auto-starts with `docker compose up`). Backend calls it via `EMBEDDING_API_URL` (default `http://embedding:8001/embed` inside Docker). The endpoint expects `POST {"texts": [...]}` and returns `{"embeddings": [[...]]}`. For standalone dev, override to `http://localhost:8001/embed`.
+- **Embedding model** runs as the `embedding` Docker service (GPU-accelerated via NVIDIA Container Toolkit, auto-starts with `docker compose up`). Backend calls it via `EMBEDDING_API_URL` (default `http://embedding:8001/embed` inside Docker). The endpoint expects `POST {"texts": [...]}` and returns `{"embeddings": [[...]]}`. For standalone dev, override to `http://localhost:8001/embed`. Requires an NVIDIA GPU and `nvidia-container-toolkit` on the host.
 - **Single PostgreSQL instance** (ParadeDB image) handles both vector search and BM25 — no separate vector DB.
 - **Title embeddings** stored in separate `document_title_embeddings` table with its own HNSW index for clean separation from chunk embeddings.
 - **BM25 index** is lazily created after the first document ingestion (`_ensure_bm25_index` in `services/ingestion.py`), not in `init.sql`.
 - **Reranker** gracefully degrades: returns original order if `COHERE_API_KEY` is empty or the API call fails.
 - **Version-aware ranking**: Documents are linked via `document_group` column. Version detected from `_v(\d+)` filename suffix at ingestion. "Show latest only" filter (on by default) hides superseded versions post-rerank.
-- Search tuning params are in `backend/app/core/config.py`: `SEARCH_TOP_K=50`, `RERANK_TOP_N=10`, `RRF_K=60`, `CHUNK_SIZE=512`, `CHUNK_OVERLAP=50`, `TITLE_BOOST_WEIGHT=1.5`.
+- Search tuning params are in `backend/app/core/config.py`: `SEARCH_TOP_K=50`, `RERANK_TOP_N=10`, `RRF_K=60`, `CHUNK_SIZE=512`, `CHUNK_OVERLAP=50`, `TITLE_BOOST_WEIGHT=1.5`, `EMBED_BATCH_SIZE=64`.
 
 ### Backend Layering
 
@@ -103,7 +103,7 @@ api/ (FastAPI routers) → services/ (business logic) → models/ (SQLAlchemy OR
 | Service     | Image/Build        | Port | Notes                                                      |
 |-------------|-------------------|------|--------------------------------------------------------------|
 | `db`        | paradedb/paradedb  | 5432 | Runs `init.sql` on first start, `pgdata` volume             |
-| `embedding` | `./embedding.Dockerfile` | 8001 | CPU-only PyTorch, Qwen3-Embedding-0.6B, `hf_cache` volume   |
+| `embedding` | `./embedding.Dockerfile` | 8001 | CUDA PyTorch + GPU passthrough, Qwen3-Embedding-0.6B, `hf_cache` volume |
 | `backend`   | `./backend`        | 8000 | Auto-ingests on first start, mounts `./data`                 |
 | `frontend`  | `./Fetch`          | 3000 | Bun-based dev container                                      |
 

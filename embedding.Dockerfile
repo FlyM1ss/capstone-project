@@ -1,13 +1,13 @@
-FROM python:3.11-slim
+FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
 
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
+    python3 python3-pip curl \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir \
-    torch --index-url https://download.pytorch.org/whl/cpu
+    torch --index-url https://download.pytorch.org/whl/cu121
 
 RUN pip install --no-cache-dir \
     sentence-transformers \
