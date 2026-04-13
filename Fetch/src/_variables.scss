@@ -1,0 +1,57 @@
+// ============================================================
+// FETCH — SCSS Variables (no CSS output — safe to @use in modules)
+// ============================================================
+
+// --- Backgrounds ---
+$bg-primary: #1a2332;
+$bg-sidebar: #151d2b;
+$bg-card: #1f2b3d;
+$bg-input: #f5f5f5;
+$bg-hover: #2a3a52;
+$bg-chip: #253044;
+$bg-dropdown: #1f2b3d;
+$bg-avatar-placeholder: #2a3a52;
+
+// --- Text ---
+$text-primary: #ffffff;
+$text-secondary: #8899aa;
+$text-accent: #c0392b;
+$text-input: #333333;
+$text-muted: #6677aa;
+
+// --- File type badge colors ---
+$badge-pptx-bg: #e06040;
+$badge-pptx-text: #ffffff;
+$badge-docx-bg: #4a90d9;
+$badge-docx-text: #ffffff;
+$badge-pdf-bg: #c0392b;
+$badge-pdf-text: #ffffff;
+
+// --- Borders & Dividers ---
+$border-color: #2a3a52;
+$border-color-light: #3a4a62;
+
+// --- Interactive states ---
+$color-focus-ring: rgba(192, 57, 43, 0.4);
+$color-overlay: rgba(0, 0, 0, 0.3);
+
+// --- Layout ---
+$border-radius-xs: 4px;
+$border-radius-sm: 8px;
+$border-radius-md: 12px;
+$border-radius-lg: 24px;
+$border-radius-full: 9999px;
+
+$header-height: 60px;
+$sidebar-width: 280px;
+// Narrow rail so the collapse control stays visible when the panel is hidden
+$sidebar-collapsed-width: 48px;
+$transition-speed: 0.25s;
+$transition-easing: ease-in-out;
+
+// --- Shadows ---
+$shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
+$shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+// --- Placeholder text color (computed, no function calls) ---
+$text-input-placeholder: #888888;

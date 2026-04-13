@@ -1,0 +1,13 @@
+@use '@/_variables.scss' as *;
+
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.placeholder {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
