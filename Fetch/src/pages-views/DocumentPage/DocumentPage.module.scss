@@ -2,12 +2,261 @@
 
 .page {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 860px;
+  padding-bottom: 60px;
 }
 
-.placeholder {
+// ── Back button ──────────────────────────────────────────
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
   color: var(--text-secondary);
+  padding: 0;
+  transition: color $transition-speed $transition-easing;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+}
+
+// ── Document header ───────────────────────────────────────
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.titleActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.downloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 4px 10px;
+  white-space: nowrap;
+  transition: background-color $transition-speed $transition-easing,
+    color $transition-speed $transition-easing,
+    border-color $transition-speed $transition-easing;
+
+  &:hover:not(:disabled) {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.dot {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+// ── Tab bar ───────────────────────────────────────────────
+.tabBar {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tabBtn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
   font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  margin-bottom: -1px;
+  transition: color $transition-speed $transition-easing,
+    border-color $transition-speed $transition-easing;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+}
+
+.tabBtnActive {
+  color: var(--text-primary);
+  border-bottom-color: var(--text-accent);
+}
+
+// ── Content area ──────────────────────────────────────────
+.contentArea {
+  flex: 1;
+}
+
+// ── PDF iframe ────────────────────────────────────────────
+.pdfFrame {
+  width: 100%;
+  height: 75vh;
+  border: none;
+  border-radius: $border-radius-md;
+  display: block;
+}
+
+// ── No-preview fallback (DOCX / PPTX) ────────────────────
+.noPreview {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 48px 32px;
+  background-color: var(--bg-card);
+  border-radius: $border-radius-md;
+  border: 1px solid var(--border-color);
+}
+
+.noPreviewTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.noPreviewText {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.noPreviewActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.switchBtn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  transition: background-color $transition-speed $transition-easing,
+    color $transition-speed $transition-easing;
+
+  &:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+  }
+}
+
+// ── Text content tab ──────────────────────────────────────
+.textContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background-color: var(--bg-card);
+  border-radius: $border-radius-md;
+  border: 1px solid var(--border-color);
+  padding: 24px 28px;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+.chunk {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text-primary);
+  margin: 0;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.noChunks {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 40px 0;
+}
+
+// ── Loading / error states ────────────────────────────────
+.centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 80px 0;
+}
+
+.loadingText {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.errorText {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--text-accent);
+  border-radius: $border-radius-full;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

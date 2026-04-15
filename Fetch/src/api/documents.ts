@@ -1,5 +1,5 @@
 import { Document, FileType } from '@/types';
-import { apiGet } from './client';
+import { apiGet, BASE_URL } from './client';
 
 // Backend response type (matches backend DocumentOut schema)
 interface BackendDocument {
@@ -38,4 +38,26 @@ function toDocument(item: BackendDocument): Document {
 export async function getDocuments(): Promise<Document[]> {
   const raw = await apiGet<BackendDocument[]>('/api/documents');
   return raw.map(toDocument);
+}
+
+export type { BackendDocument as DocumentDetail };
+
+export async function getDocumentById(id: string): Promise<BackendDocument> {
+  return apiGet<BackendDocument>(`/api/documents/${id}`);
+}
+
+export interface DocumentChunk {
+  chunk_index: number;
+  content: string;
+}
+
+export async function getDocumentChunks(id: string): Promise<DocumentChunk[]> {
+  const res = await apiGet<{ document_id: string; chunks: DocumentChunk[] }>(
+    `/api/documents/${id}/chunks`,
+  );
+  return res.chunks;
+}
+
+export function getDocumentFileUrl(id: string): string {
+  return `${BASE_URL}/api/documents/${id}/file`;
 }

@@ -67,6 +67,16 @@ class DocumentUploadResponse(BaseModel):
     status: str = "ingested"
 
 
+class ChunkOut(BaseModel):
+    chunk_index: int
+    content: str
+
+
+class DocumentChunksResponse(BaseModel):
+    document_id: UUID
+    chunks: list[ChunkOut]
+
+
 # --- Auth ---
 class UserOut(BaseModel):
     id: UUID

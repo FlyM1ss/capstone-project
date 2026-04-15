@@ -3,12 +3,13 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi.responses import FileResponse
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db_session
 from app.models.db import Document, DocumentChunk
-from app.models.schemas import DocumentOut, DocumentUploadResponse
+from app.models.schemas import DocumentOut, DocumentUploadResponse, DocumentChunksResponse, ChunkOut
 from app.services.ingestion import ingest_document
 
 router = APIRouter()
@@ -89,3 +90,37 @@ async def get_document(doc_id: uuid.UUID, db: AsyncSession = Depends(get_db_sess
     doc_out = DocumentOut.model_validate(row[0])
     doc_out.chunk_count = row[1]
     return doc_out
+
+
+@router.get("/documents/{doc_id}/file")
+async def get_document_file(doc_id: uuid.UUID, db: AsyncSession = Depends(get_db_session)):
+    result = await db.execute(select(Document).where(Document.id == doc_id))
+    doc = result.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if not doc.file_path or not os.path.exists(doc.file_path):
+        raise HTTPException(status_code=404, detail="File not available on disk")
+    filename = os.path.basename(doc.file_path)
+    media_type = "application/pdf" if doc.doc_type == "pdf" else "application/octet-stream"
+    return FileResponse(
+        doc.file_path,
+        media_type=media_type,
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
+
+
+@router.get("/documents/{doc_id}/chunks", response_model=DocumentChunksResponse)
+async def get_document_chunks(doc_id: uuid.UUID, db: AsyncSession = Depends(get_db_session)):
+    doc_result = await db.execute(select(Document).where(Document.id == doc_id))
+    if not doc_result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Document not found")
+    chunks_result = await db.execute(
+        select(DocumentChunk)
+        .where(DocumentChunk.document_id == doc_id)
+        .order_by(DocumentChunk.chunk_index)
+    )
+    chunks = chunks_result.scalars().all()
+    return DocumentChunksResponse(
+        document_id=doc_id,
+        chunks=[ChunkOut(chunk_index=c.chunk_index, content=c.content) for c in chunks],
+    )
