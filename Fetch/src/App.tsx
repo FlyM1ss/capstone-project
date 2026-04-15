@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { UserProvider } from '@/context/UserContext';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { DocumentsProvider } from '@/context/DocumentsContext';
 import Layout from '@/components/Layout/Layout';
 import SearchPage from '@/pages-views/SearchPage/SearchPage';
 import ResultsPage from '@/pages-views/ResultsPage/ResultsPage';
@@ -12,14 +13,16 @@ export default function App() {
     <BrowserRouter>
       <ThemeProvider>
         <UserProvider>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<SearchPage />} />
-              <Route path="/results" element={<ResultsPage />} />
-              <Route path="/account" element={<AccountPage />} />
-              <Route path="/document/:id" element={<DocumentPage />} />
-            </Routes>
-          </Layout>
+          <DocumentsProvider>
+            <Layout>
+              <Routes>
+                <Route path="/" element={<SearchPage />} />
+                <Route path="/results" element={<ResultsPage />} />
+                <Route path="/account" element={<AccountPage />} />
+                <Route path="/document/:id" element={<DocumentPage />} />
+              </Routes>
+            </Layout>
+          </DocumentsProvider>
         </UserProvider>
       </ThemeProvider>
     </BrowserRouter>

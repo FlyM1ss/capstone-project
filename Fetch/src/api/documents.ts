@@ -34,37 +34,8 @@ function toDocument(item: BackendDocument): Document {
   };
 }
 
-// Pinned state stored client-side in localStorage
-function getPinnedIds(): Set<string> {
-  try {
-    const raw = localStorage.getItem('fetch-pinned-docs');
-    return new Set(raw ? JSON.parse(raw) : []);
-  } catch {
-    return new Set();
-  }
-}
-
-export function togglePinDocument(docId: string): void {
-  const pinned = getPinnedIds();
-  if (pinned.has(docId)) {
-    pinned.delete(docId);
-  } else {
-    pinned.add(docId);
-  }
-  localStorage.setItem('fetch-pinned-docs', JSON.stringify([...pinned]));
-}
-
-export async function getDocuments(): Promise<{ pinned: Document[]; recent: Document[] }> {
+// Pure API fetch — pin/recent state is managed by DocumentsContext, not here.
+export async function getDocuments(): Promise<Document[]> {
   const raw = await apiGet<BackendDocument[]>('/api/documents');
-  const pinnedIds = getPinnedIds();
-
-  const allDocs = raw.map(toDocument).map((doc) => ({
-    ...doc,
-    isPinned: pinnedIds.has(doc.id),
-  }));
-
-  return {
-    pinned: allDocs.filter((d) => d.isPinned),
-    recent: allDocs.filter((d) => !d.isPinned).slice(0, 10),
-  };
+  return raw.map(toDocument);
 }
