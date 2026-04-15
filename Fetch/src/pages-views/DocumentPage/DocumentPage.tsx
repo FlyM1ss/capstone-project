@@ -58,7 +58,9 @@ export default function DocumentPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = doc.title;
+      const ext = fileTypeFromDocType(doc.doc_type);
+      const hasExt = doc.title.toLowerCase().endsWith(`.${ext}`);
+      a.download = hasExt ? doc.title : `${doc.title}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
