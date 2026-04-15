@@ -1,4 +1,8 @@
 import os
+import argparse
+import re
+import zlib
+from pathlib import Path
 from docx import Document
 from pptx import Presentation
 from reportlab.lib.pagesizes import letter
@@ -30,14 +34,171 @@ Given the rapidly evolving nature of global markets and legal standards, these c
 
 """
 
-generic_content = [
-    ("Company Policy Overview", long_preamble + "\n\n6. POLICY DISCUSSIONS\nThis document serves as an overview of various company policies. It briefly mentions important policies such as the PTO guidelines, the expense reimbursement rules, and the employee code of conduct. However, the exact details, numbers, limits, and procedural forms for these policies are intentionally omitted from this high-level summary. Please refer to the specific policy manuals on the intranet for any actionable information about your PTO balance or per-diem expenses. We emphasize compliance with all rules and regulations. End of generic policy discussion."),
-    ("Onboarding Guidelines Mention", long_preamble + "\n\n6. ONBOARDING PREVIEW\nNew employees go through an essential onboarding procedure during their first week. During this general orientation session, managers will bring up topics including benefits packages, health insurance options, standard working hours, and sick leave protocols. This file, however, does not contain the actual sick leave allowance, nor does it list the health insurance provider options or plan deductibles. Its purpose is merely to establish that a formal onboarding curriculum exists and touches upon these categories."),
-    ("IT Security Framework summary", long_preamble + "\n\n6. SECURITY PRINCIPLES\nOur IT security framework addresses foundational concepts like password rotation, two-factor authentication, and secure remote VPN access. Strong password policies are important for network safety and mitigating unauthorized access. We require passwords to be updated occasionally, but the specific rotation frequency (e.g., whether it is 30, 60, or 90 days) and complexity requirements are detailed in the formal IT Security Specifications manual. Users should maintain robust credential hygiene. This framework merely highlights the importance of organizational cybersecurity."),
-    ("Annual Review Process mention", long_preamble + "\n\n6. REVIEW CYCLE EXPECTATIONS\nThe annual performance review occurs once per standard calendar year. It typically involves a mix of self-evaluations, peer review feedback, and direct manager assessments. The precise deadlines for form submission, the grading rubrics used by HR, and the criteria and budget allocation for financial promotions are described in the official compensation and advancement handbook, not in this document. We value continuous improvement and constructive feedback across all departments without codifying the operational steps here."),
-    ("Travel Reimbursement Thoughts", long_preamble + "\n\n6. TRAVEL REIMBURSEMENT IDEOLOGY\nWhen traveling out of state for approved business purposes, employees can request reimbursement for standard travel costs including commercial flights, transit, hotel accommodations, and daily meals. The maximum limits per meal, the preferred airline partners, and the permitted hotel star ratings are not covered in this document. Please ensure you retain all original copies of receipts for the accounting department to process your claims. The total reimbursement processing timeline may vary heavily from week to week after the expense report is electronically submitted."),
-    ("Remote Work Philosophy", long_preamble + "\n\n6. FLEXIBILITY IDEOLOGY\nWe support the overarching concept of remote work and flexible scheduling. The granular operational details—such as exactly how many days per week you are authorized to work from home, the core hours you must be online, or the hardware stipend amount provided—are decided exclusively by individual department heads based on operational needs, and are not codified in this philosophy paper. It serves exclusively as a qualitative statement that our corporate leadership believes in employee flexibility and promoting a healthy work-life balance."),
-]
+def _to_topic_label(filename):
+    stem = Path(filename).stem
+    return stem.replace("_", " ")
+
+def _normalize_whitespace(text):
+    return re.sub(r"\s+", " ", text).strip()
+
+def _extract_docx_text(path):
+    try:
+        doc = Document(str(path))
+        return "\n".join(p.text for p in doc.paragraphs if p.text)
+    except Exception:
+        return ""
+
+def _extract_pptx_text(path):
+    try:
+        prs = Presentation(str(path))
+        parts = []
+        for slide in prs.slides:
+            for shape in slide.shapes:
+                if hasattr(shape, "text") and shape.text:
+                    parts.append(shape.text)
+        return "\n".join(parts)
+    except Exception:
+        return ""
+
+def _extract_pdf_text(path):
+    def _heuristic_pdf_extract(file_path):
+        try:
+            raw = file_path.read_bytes()
+        except Exception:
+            return ""
+
+        chunks = []
+        # Try to recover visible text from compressed or plain PDF streams.
+        for match in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", raw, re.DOTALL):
+            stream_data = match.group(1)
+            candidates = [stream_data]
+
+            try:
+                candidates.append(zlib.decompress(stream_data))
+            except Exception:
+                pass
+
+            for candidate in candidates:
+                decoded = candidate.decode("latin-1", errors="ignore")
+                # Text strings in content streams are commonly wrapped in parentheses.
+                for piece in re.findall(r"\(([^\)]{8,})\)", decoded):
+                    cleaned = _normalize_whitespace(piece.replace(r"\(", "(").replace(r"\)", ")"))
+                    if cleaned:
+                        chunks.append(cleaned)
+                if len(chunks) >= 120:
+                    break
+            if len(chunks) >= 120:
+                break
+
+        if not chunks:
+            decoded_all = raw.decode("latin-1", errors="ignore")
+            for piece in re.findall(r"[A-Za-z][A-Za-z0-9 ,:/&\-]{24,}", decoded_all):
+                cleaned = _normalize_whitespace(piece)
+                if cleaned:
+                    chunks.append(cleaned)
+                if len(chunks) >= 20:
+                    break
+
+        return " ".join(chunks)
+
+    reader_cls = None
+    try:
+        from pypdf import PdfReader  # type: ignore
+        reader_cls = PdfReader
+    except Exception:
+        try:
+            from PyPDF2 import PdfReader  # type: ignore
+            reader_cls = PdfReader
+        except Exception:
+            return _heuristic_pdf_extract(path)
+
+    try:
+        reader = reader_cls(str(path))
+        extracted = "\n".join((page.extract_text() or "") for page in reader.pages)
+        if _normalize_whitespace(extracted):
+            return extracted
+        return _heuristic_pdf_extract(path)
+    except Exception:
+        return _heuristic_pdf_extract(path)
+
+def _extract_auxiliary_snippet(path, max_words=22):
+    suffix = path.suffix.lower()
+
+    if suffix == ".docx":
+        raw_text = _extract_docx_text(path)
+    elif suffix == ".pptx":
+        raw_text = _extract_pptx_text(path)
+    elif suffix == ".pdf":
+        raw_text = _extract_pdf_text(path)
+    else:
+        raw_text = ""
+
+    normalized = _normalize_whitespace(raw_text)
+    if not normalized:
+        topic = _to_topic_label(path.name)
+        return f"Reference entry for {topic} in the auxiliary corpus."
+
+    words = normalized.split(" ")
+    snippet = " ".join(words[:max_words])
+    if len(words) > max_words:
+        snippet += " ..."
+    return snippet
+
+def _collect_auxiliary_topics():
+    aux_dir = Path("data/auxiliary")
+    if not aux_dir.exists():
+        return []
+
+    entries = []
+    for file_path in sorted(aux_dir.iterdir()):
+        if not file_path.is_file():
+            continue
+        entries.append(
+            {
+                "topic": _to_topic_label(file_path.name),
+                "snippet": _extract_auxiliary_snippet(file_path),
+            }
+        )
+    return entries
+
+def _build_generic_appendix_text(aux_topics):
+    intro = (
+        "APPENDIX MASTER INDEX FOR RETRIEVAL COVERAGE\n"
+        "This generic appendix intentionally references topics from all auxiliary files so broad enterprise queries can match this document set. "
+        "It is not a source of authoritative policy details.\n\n"
+        "COVERAGE KEYWORDS\n"
+        "policy procedure standard guideline workflow onboarding orientation remote work travel expense reimbursement payroll accounts payable budget finance controls audit compliance ethics code of conduct conflict of interest whistleblower non-retaliation privacy data retention records management customer data handling third-party risk supplier code security password authentication incident response business continuity safety harassment discrimination DEI accommodations wellness benefits hiring recruitment performance management learning development social media communications intellectual property change management product roadmap business review\n\n"
+        "AUXILIARY TOPIC INDEX\n"
+    )
+
+    topic_lines = [
+        f"- {entry['topic']} | snippet: {entry['snippet']}"
+        for entry in aux_topics
+    ]
+
+    footer = (
+        "\nCROSS-REFERENCE NOTE\n"
+        "Searches for any listed topic, acronym, or phrase may retrieve this appendix because it aggregates references across HR, IT, finance, legal, compliance, operations, and product domains."
+    )
+
+    return intro + "\n".join(topic_lines) + footer
+
+def _build_generic_content():
+    aux_topics = _collect_auxiliary_topics()
+    appendix_text = _build_generic_appendix_text(aux_topics)
+
+    titles = [
+        "Enterprise Topics Appendix A",
+        "Enterprise Topics Appendix B",
+        "Enterprise Topics Appendix C",
+        "Enterprise Topics Appendix D",
+        "Enterprise Topics Appendix E",
+        "Enterprise Topics Appendix F",
+    ]
+
+    return [(title, appendix_text) for title in titles]
+
+generic_content = _build_generic_content()
 
 malformed_content = [
     ("Corrupted Expense Report", long_preamble + "\n\n6. EXPENSE SUBMISSIONS\nThis expense report contains several mandatory procedural steps. Employees are expected to submit their reports by the end of the month. To do so, you must log into the designated financial portal and upload all associated rec"),
@@ -101,23 +262,122 @@ def make_pdf(path, title, content):
                 y = 750
     c.save()
 
+def _overwrite_bytes(path, data):
+    with open(path, "wb") as f:
+        f.write(data)
+
+def _corrupt_pdf_missing_structure(path):
+    # Intentionally malformed: missing xref table, broken object structure, no valid EOF marker.
+    payload = (
+        b"%PDF-1.7\n"
+        b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R\nendobj\n"
+        b"2 0 obj\n<< /Type /Pages /Count 1 /Kids [3 0 R] >>\nendobj\n"
+        b"3 0 obj\n<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>\nendobj\n"
+        b"4 0 obj\n<< /Length 32 >>\nstream\n"
+        b"BT /F1 12 Tf 72 720 Td (Corrupted stream without endstream"
+    )
+    _overwrite_bytes(path, payload)
+
+def _corrupt_pdf_random_noise(path):
+    rng = random.Random(4100)
+    noise = bytearray(rng.getrandbits(8) for _ in range(1024))
+    noise[:8] = b"%PDE-0.0"
+    noise[120:140] = b"BROKEN_PDF_SEGMENT__"
+    _overwrite_bytes(path, bytes(noise))
+
+def _corrupt_ooxml_plaintext(path):
+    # OOXML files must be ZIP containers; plaintext guarantees parser failure.
+    payload = (
+        b"INTENTIONALLY_MALFORMED_OOXML\n"
+        b"This file has a .docx/.pptx extension but is not a ZIP container.\n"
+        b"Marker: 0xDEADBEEF\n"
+    )
+    _overwrite_bytes(path, payload)
+
+def _corrupt_ooxml_truncate_zip(path):
+    with open(path, "rb") as f:
+        data = f.read()
+
+    keep = max(128, len(data) // 12)
+    truncated = data[:keep]
+
+    # Remove end-of-central-directory marker if still present.
+    truncated = truncated.replace(b"PK\x05\x06", b"BROK")
+    _overwrite_bytes(path, truncated)
+
+def _corrupt_ooxml_bad_header(path):
+    with open(path, "rb") as f:
+        data = bytearray(f.read())
+
+    if len(data) >= 4:
+        data[0:4] = b"ZZZZ"
+    if len(data) >= 64:
+        data[48:64] = b"CORRUPTED-HEADER"
+
+    # Truncate enough bytes to break central directory recovery in tolerant ZIP parsers.
+    cut = max(256, len(data) // 3)
+    corrupted = bytes(data[:cut]).replace(b"PK\x05\x06", b"BROK")
+    _overwrite_bytes(path, corrupted)
+
+def _apply_malformed_corruption(path, index):
+    strategies = [
+        _corrupt_ooxml_plaintext,   # Corrupted_Expense_Report.docx
+        _corrupt_ooxml_truncate_zip,  # Incomplete_PTO_Policy.pptx
+        _corrupt_pdf_missing_structure,  # Broken_Benefits_Summary.pdf
+        _corrupt_ooxml_bad_header,  # Malformed_Security_Protocol.docx
+        _corrupt_ooxml_plaintext,   # Unfinished_Onboarding_Doc.pptx
+        _corrupt_pdf_random_noise,  # Garbled_Quarterly_Review.pdf
+    ]
+    strategies[index](path)
+
 def generate_docs(category, contents):
     folder = f"data/{category}"
+    # Regeneration should replace older synthetic docs, not accumulate them.
+    for ext in ("*.docx", "*.pptx", "*.pdf"):
+        for old_file in Path(folder).glob(ext):
+            old_file.unlink(missing_ok=True)
+
     # We want 6 documents per category, 3 formats.
     # Distribute them: 2 docx, 2 pdf, 2 pptx
     for i, (title, text) in enumerate(contents):
         format_idx = i % 3
         safe_title = title.replace(" ", "_")
+        file_path = ""
         
         if format_idx == 0:
-            make_docx(f"{folder}/{safe_title}.docx", title, text)
+            file_path = f"{folder}/{safe_title}.docx"
+            make_docx(file_path, title, text)
         elif format_idx == 1:
-            make_pptx(f"{folder}/{safe_title}.pptx", title, text)
+            file_path = f"{folder}/{safe_title}.pptx"
+            make_pptx(file_path, title, text)
         elif format_idx == 2:
-            make_pdf(f"{folder}/{safe_title}.pdf", title, text)
+            file_path = f"{folder}/{safe_title}.pdf"
+            make_pdf(file_path, title, text)
 
-generate_docs("generic", generic_content)
-generate_docs("malformed", malformed_content)
-generate_docs("prompt-injected", prompt_injected_content)
+        if category == "malformed":
+            _apply_malformed_corruption(file_path, i)
 
-print("Generated all files successfully.")
+def main():
+    parser = argparse.ArgumentParser(description="Generate synthetic documents for dataset categories.")
+    parser.add_argument(
+        "--categories",
+        nargs="+",
+        choices=["generic", "malformed", "prompt-injected"],
+        default=["generic", "malformed", "prompt-injected"],
+        help="Which categories to regenerate (default: all).",
+    )
+    args = parser.parse_args()
+
+    category_map = {
+        "generic": generic_content,
+        "malformed": malformed_content,
+        "prompt-injected": prompt_injected_content,
+    }
+
+    for category in args.categories:
+        generate_docs(category, category_map[category])
+
+    print(f"Generated categories: {', '.join(args.categories)}")
+
+if __name__ == "__main__":
+    main()

@@ -19,10 +19,16 @@ docker compose up -d --build            # Rebuild images (only needed after requ
 docker compose down                     # Stop all services
 docker compose down -v                  # Stop all services + delete all data (fresh start)
 docker compose logs -f backend          # Tail backend logs (shows ingestion progress)
-docker compose exec backend python -m app.scripts.ingest_all              # Re-ingest clean data (manual)
-docker compose exec backend python -m app.scripts.ingest_all --poisoned   # Ingest poisoned data only (adversarial test)
-docker compose exec backend python -m app.scripts.ingest_all --all        # Ingest everything (clean + poisoned)
-docker compose exec backend python -m app.scripts.ingest_all --clean      # Wipe DB + re-ingest clean data
+docker compose exec backend python -m app.scripts.ingest_all              # Re-ingest clean data (generic + auxiliary)
+docker compose exec backend python -m app.scripts.ingest_all --poisoned   # Adversarial data (malformed + prompt-injected + legacy poisoned)
+docker compose exec backend python -m app.scripts.ingest_all --all        # Ingest everything
+docker compose exec backend python -m app.scripts.ingest_all --clean      # Wipe DB + re-ingest using selected mode
+
+# Optional ingest targeting/settings:
+docker compose exec backend python -m app.scripts.ingest_all --mode malformed
+docker compose exec backend python -m app.scripts.ingest_all --mode prompt-injected
+docker compose exec backend python -m app.scripts.ingest_all --categories generic malformed
+docker compose exec backend python -m app.scripts.ingest_all --recursive --limit 25
 
 # === Backend standalone ===
 cd backend

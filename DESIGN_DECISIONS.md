@@ -620,26 +620,35 @@ NEXTAUTH_URL=http://localhost:3000
 
 ## 12. DATA ARCHITECTURE & INGESTION
 
-### 12.1 Multi-Source Dataset: Sample Docs + Auxiliary Data + Poisoned Data
+### 12.1 Multi-Source Dataset: Generic + Auxiliary + Adversarial Data
 
 **Evidence:**
 - **Commit:** `c2a885f` ("Upload first batch of auxiliary data") — 60+ curated documents
 - **Commit:** `a44c30b` ("data: rename sample docs with clean descriptive titles")
-- **Folder structure:** `data/sample-docs/`, `data/auxiliary/`, `data/poisoned/`
+- **Current folder structure:** `data/generic/`, `data/auxiliary/`, `data/malformed/`, `data/prompt-injected/`, `data/poisoned/`
 
 **Ingestion script options:**
 ```bash
-python -m app.scripts.ingest_all              # Clean data only
-python -m app.scripts.ingest_all --poisoned   # Adversarial test only
-python -m app.scripts.ingest_all --all        # Everything
+python -m app.scripts.ingest_all                               # Clean data only (generic + auxiliary)
+python -m app.scripts.ingest_all --poisoned                    # Adversarial test set (malformed + prompt-injected + legacy poisoned)
+python -m app.scripts.ingest_all --all                         # Everything
+python -m app.scripts.ingest_all --clean                       # Wipe DB + re-ingest selected mode
+
+# Additional targeting/settings now supported:
+python -m app.scripts.ingest_all --mode malformed
+python -m app.scripts.ingest_all --mode prompt-injected
+python -m app.scripts.ingest_all --categories generic malformed
+python -m app.scripts.ingest_all --recursive --limit 25
 ```
 
 **Dataset composition:**
-- **Sample docs:** ~7 curated PDFs (academic papers, consulting concepts)
-- **Auxiliary:** ~60 corporate policies, reports, presentations (realistic Deloitte-like)
-- **Poisoned:** ~30 intentionally misleading or conflicting documents (adversarial testing)
+- **Generic:** broad appendix-style corporate topic coverage docs
+- **Auxiliary:** curated corporate policies, reports, and presentations
+- **Malformed:** intentionally corrupted file structures for parser robustness testing
+- **Prompt-injected:** intentionally adversarial instruction-laced documents
+- **Poisoned (legacy):** intentionally misleading/conflicting content retained for backward compatibility
 
-**Purpose of poisoned data:** Evaluate search pipeline robustness to conflicting information and adversarial inputs.
+**Purpose of adversarial data:** Evaluate search pipeline robustness to conflicting information, malformed files, and prompt-injection style inputs.
 
 ---
 
