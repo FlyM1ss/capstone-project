@@ -79,6 +79,9 @@ data/*
 !data/sample-docs/**
 !data/auxiliary
 !data/poisoned
+!data/prompt-injected
+!data/malformed
+!data/generic
 !data/sample
 elasticsearch-data/
 
