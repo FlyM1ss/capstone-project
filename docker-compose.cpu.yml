@@ -1,0 +1,8 @@
+# CPU override — use on machines without an NVIDIA GPU (e.g. MacBooks).
+# Usage: docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
+services:
+  embedding:
+    build:
+      context: .
+      dockerfile: embedding.cpu.Dockerfile
+    deploy: !reset {}

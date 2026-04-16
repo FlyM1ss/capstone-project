@@ -1,7 +1,8 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Document, FileType, SearchFilters } from '@/types';
+import { Document, FileType, SearchFilters, SearchRequest } from '@/types';
 import { searchDocuments } from '@/api/search';
+import { getCachedSearch, setCachedSearch } from '@/api/searchCache';
 import { FILE_TYPES } from '@/constants/filters';
 import SearchBar from '@/components/SearchBar/SearchBar';
 import FilterControls from '@/components/FilterControls/FilterControls';
@@ -16,11 +17,6 @@ export default function ResultsPage() {
   const dateEnd = searchParams.get('dateEnd') ?? '';
   const authorizedParam = (searchParams.get('authorized') ?? 'all') as NonNullable<SearchFilters['authorized']>;
 
-  const [results, setResults] = useState<Document[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
   const activeTypes: FileType[] = typesParam
     ? (typesParam.split(',') as FileType[])
     : FILE_TYPES;
@@ -31,14 +27,33 @@ export default function ResultsPage() {
     authorized: authorizedParam,
   };
 
+  const request: SearchRequest = { query, filters };
+
+  const [results, setResults] = useState<Document[]>(() =>
+    query ? getCachedSearch(request)?.results ?? [] : []
+  );
+  const [totalCount, setTotalCount] = useState(() =>
+    query ? getCachedSearch(request)?.totalCount ?? 0 : 0
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
   useEffect(() => {
     if (!query) return;
+    const cached = getCachedSearch(request);
+    if (cached) {
+      setResults(cached.results);
+      setTotalCount(cached.totalCount);
+      setError(null);
+      return;
+    }
     startTransition(async () => {
       try {
-        const res = await searchDocuments({ query, filters });
+        const res = await searchDocuments(request);
         setResults(res.results);
         setTotalCount(res.totalCount);
         setError(null);
+        setCachedSearch(request, res);
       } catch (err) {
         console.error('Search failed:', err);
         setError('Search failed. Make sure the backend is running.');
