@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import os
 import re
 import uuid
 from pathlib import Path
@@ -14,6 +15,44 @@ from app.models.db import Document, DocumentChunk, DocumentTitleEmbedding
 from app.services.embeddings import generate_embedding, generate_embeddings
 
 
+def _build_converter(disable_ocr: bool = False) -> DocumentConverter:
+    """Build a Docling converter with optional OCR disablement for PDFs.
+
+    OCR disablement is useful in restricted environments where EasyOCR model
+    downloads fail due SSL/proxy constraints.
+    """
+    format_options = {
+        InputFormat.PPTX: PowerpointFormatOption(
+            pipeline_cls=SimplePipeline,
+        ),
+    }
+
+    if disable_ocr:
+        try:
+            from docling.datamodel.pipeline_options import PdfPipelineOptions
+            from docling.document_converter import PdfFormatOption
+
+            pdf_options = PdfPipelineOptions()
+            if hasattr(pdf_options, "do_ocr"):
+                pdf_options.do_ocr = False
+
+            format_options[InputFormat.PDF] = PdfFormatOption(
+                pipeline_options=pdf_options,
+            )
+        except Exception as e:
+            # Keep parsing functional even if Docling PDF option APIs differ by version.
+            print(f"Warning: unable to configure OCR-off PDF mode ({e}).")
+
+    return DocumentConverter(
+        allowed_formats=[
+            InputFormat.PDF,
+            InputFormat.DOCX,
+            InputFormat.PPTX,
+        ],
+        format_options=format_options,
+    )
+
+
 def compute_file_hash(file_path: str) -> str:
     """Compute SHA-256 hash of a file's contents."""
     sha256 = hashlib.sha256()
@@ -25,19 +64,29 @@ def compute_file_hash(file_path: str) -> str:
 
 def _parse_document(file_path: str) -> tuple[str, int | None]:
     """Synchronous Docling parsing — runs in a thread pool."""
-    converter = DocumentConverter(
-        allowed_formats=[
-            InputFormat.PDF,
-            InputFormat.DOCX,
-            InputFormat.PPTX,
-        ],
-        format_options={
-            InputFormat.PPTX: PowerpointFormatOption(
-                pipeline_cls=SimplePipeline,
-            ),
-        },
-    )
-    result = converter.convert(Path(file_path))
+    disable_ocr_env = os.getenv("DOCLING_DISABLE_OCR", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+    converter = _build_converter(disable_ocr=disable_ocr_env)
+
+    try:
+        result = converter.convert(Path(file_path))
+    except Exception as e:
+        error_text = str(e)
+        ssl_download_issue = "SSL" in error_text and "record layer failure" in error_text
+
+        # Automatic fallback: retry once with OCR disabled when OCR model download fails.
+        if ssl_download_issue and not disable_ocr_env:
+            print("Docling OCR model download failed due SSL; retrying parse with OCR disabled.")
+            converter = _build_converter(disable_ocr=True)
+            result = converter.convert(Path(file_path))
+        else:
+            raise
+
     full_text = result.document.export_to_markdown()
     page_count = result.document.num_pages() if hasattr(result.document, "num_pages") else None
     return full_text, page_count
