@@ -76,7 +76,7 @@ export default function ResultsPage() {
     const next = activeTypes.includes(type)
       ? activeTypes.filter((t) => t !== type)
       : [...activeTypes, type];
-    updateParams({ types: next.join(',') });
+    updateParams({ types: next.length === FILE_TYPES.length ? null : next.join(',') });
   }
 
   function setDateRange(start: string, end: string) {

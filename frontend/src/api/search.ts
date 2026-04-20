@@ -29,6 +29,8 @@ function normalizeFileType(docType: string): FileType {
   if (lower.includes('pdf')) return 'pdf';
   if (lower.includes('docx') || lower.includes('word')) return 'docx';
   if (lower.includes('pptx') || lower.includes('powerpoint') || lower.includes('ppt')) return 'pptx';
+  if (lower.includes('xlsx') || lower.includes('excel')) return 'docx';
+  if (lower.includes('md') || lower.includes('txt') || lower.includes('text')) return 'docx';
   return 'pdf';
 }
 

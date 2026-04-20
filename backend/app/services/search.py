@@ -40,8 +40,11 @@ async def hybrid_search(
     doc_type_clause = ""
     doc_type_params = {}
     if filters and filters.get("doc_type"):
-        doc_type_clause = "AND d.doc_type = :filter_doc_type"
-        doc_type_params["filter_doc_type"] = filters["doc_type"]
+        raw_types = [t.strip() for t in str(filters["doc_type"]).split(",") if t.strip()]
+        if raw_types:
+            placeholders = ", ".join(f":filter_doc_type_{i}" for i in range(len(raw_types)))
+            doc_type_clause = f"AND d.doc_type IN ({placeholders})"
+            doc_type_params = {f"filter_doc_type_{i}": t for i, t in enumerate(raw_types)}
 
     # Combine all filter params for reuse across queries
     filter_params = {**access_params, **category_params, **doc_type_params}
