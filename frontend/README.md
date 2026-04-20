@@ -1,56 +1,40 @@
-# Deloitte Search - Frontend
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
 
-Next.js 16 (App Router) frontend for the AI-driven company-wide search engine.
+## Getting Started
 
-## Tech Stack
-
-- **Framework:** Next.js 16.1.6 (App Router, React 19)
-- **UI:** shadcn/ui (@base-ui/react primitives) + Tailwind CSS 4
-- **Icons:** lucide-react
-- **Font:** Geist (Google Fonts, optimized via next/font)
-- **Package Manager:** Bun (Docker), npm (local)
-
-## Pages
-
-| Route | Description |
-|-------|-------------|
-| `/` | Landing page with search bar and example queries |
-| `/search` | Search results with filter sidebar (category, doc type, latest-only toggle) |
-| `/admin/upload` | Document upload portal with drag-and-drop |
-
-## Components
-
-- `search-bar.tsx` - Search input with URL-based navigation and search tips popup
-- `result-card.tsx` - Document result display with version badge, category, metadata
-- `filter-panel.tsx` - Sidebar filters (latest-only toggle, category, file type)
-- `file-upload.tsx` - Drag-and-drop file uploader with progress indicators
-- `search-tips.tsx` - Popup with example search queries
-
-## API Client
-
-`lib/api.ts` connects to the backend via `NEXT_PUBLIC_API_URL` (default: `http://localhost:8000`):
-
-- `POST /api/search` - Hybrid search with filters
-- `GET /api/documents` - List ingested documents
-- `POST /api/documents` - Upload a document (multipart form)
-
-## Development
+First, run the development server:
 
 ```bash
-bun install
-bun run dev       # Dev server on :3000
-bun run build     # Production build
-bun run lint      # ESLint
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-Or via Docker Compose from the repo root:
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-```bash
-docker compose up frontend
-```
+You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
 
-## Environment Variables
+[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Backend API base URL |
+The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+
+This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
