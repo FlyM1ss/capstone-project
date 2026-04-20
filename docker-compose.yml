@@ -48,6 +48,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       EMBEDDING_API_URL: ${EMBEDDING_API_URL}
       COHERE_API_KEY: ${COHERE_API_KEY}
+      GOTENBERG_URL: http://gotenberg:3000
     volumes:
       - ./backend:/app
       - ./data:/data
@@ -57,11 +58,17 @@ services:
         condition: service_healthy
       embedding:
         condition: service_healthy
+      gotenberg:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    restart: unless-stopped
 
   frontend:
     build:

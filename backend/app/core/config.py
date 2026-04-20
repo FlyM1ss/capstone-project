@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://deloitte:deloitte_dev@localhost:5432/search_engine"
     EMBEDDING_API_URL: str = "http://localhost:8001/embed"
     COHERE_API_KEY: str = ""
+    GOTENBERG_URL: str = "http://localhost:3001"
 
     # Search tuning
     SEARCH_TOP_K: int = 50

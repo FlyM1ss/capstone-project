@@ -61,3 +61,7 @@ export async function getDocumentChunks(id: string): Promise<DocumentChunk[]> {
 export function getDocumentFileUrl(id: string): string {
   return `${BASE_URL}/api/documents/${id}/file`;
 }
+
+export function getDocumentPreviewUrl(id: string): string {
+  return `${BASE_URL}/api/documents/${id}/preview`;
+}
