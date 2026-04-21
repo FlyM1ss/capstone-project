@@ -1,0 +1,33 @@
+graph LR
+    Q([User Query])
+    V["<b>Lobby Checkpoint</b><br/><i>Input Validator</i>"]
+    S1["<b>Meaning Specialist</b><br/><i>pgvector semantic</i>"]
+    S2["<b>Exact-Match Specialist</b><br/><i>ParadeDB BM25</i>"]
+    S3["<b>Intent Specialist</b><br/><i>Title similarity</i>"]
+    M["<b>Consensus Vote</b><br/><i>RRF Merge</i>"]
+    R["<b>Senior Expert Review</b><br/><i>Cohere Rerank v3.5</i>"]
+    F["<b>Compliance Filter</b><br/><i>RBAC + Version Filter</i>"]
+    A([Ranked Results])
+
+    Q --> V
+    V --> S1
+    V --> S2
+    V --> S3
+    S1 --> M
+    S2 --> M
+    S3 --> M
+    M --> R
+    R --> F
+    F --> A
+
+    classDef endpoint fill:#1f2937,stroke:#0f172a,color:#ffffff,stroke-width:2px
+    classDef boundary fill:#fef3c7,stroke:#92400e,color:#92400e,stroke-width:2px
+    classDef retrieval fill:#dbeafe,stroke:#1e40af,color:#1e40af,stroke-width:2px
+    classDef precision fill:#dcfce7,stroke:#166534,color:#166534,stroke-width:2px
+    classDef trust fill:#fee2e2,stroke:#991b1b,color:#991b1b,stroke-width:2px
+
+    class Q,A endpoint
+    class V boundary
+    class S1,S2,S3,M retrieval
+    class R precision
+    class F trust
