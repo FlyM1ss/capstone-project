@@ -3,14 +3,16 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.deps import get_db_session
 from app.models.db import Document, DocumentChunk
 from app.models.schemas import DocumentOut, DocumentUploadResponse, DocumentChunksResponse, ChunkOut
 from app.services.ingestion import ingest_document
+from app.services.pdf_conversion import get_pdf_bytes, invalidate_cache
 
 router = APIRouter()
 
@@ -44,6 +46,7 @@ async def upload_document(
         if result is None:
             raise HTTPException(status_code=409, detail="Document already exists with identical content")
         doc, chunk_count = result
+        invalidate_cache(str(doc.id))
         return DocumentUploadResponse(
             document_id=doc.id, title=doc.title, chunks_created=chunk_count,
         )
@@ -106,6 +109,25 @@ async def get_document_file(doc_id: uuid.UUID, db: AsyncSession = Depends(get_db
         doc.file_path,
         media_type=media_type,
         headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
+
+
+@router.get("/documents/{doc_id}/preview")
+async def get_document_preview(doc_id: uuid.UUID, db: AsyncSession = Depends(get_db_session)):
+    result = await db.execute(select(Document).where(Document.id == doc_id))
+    doc = result.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if not doc.file_path or not os.path.exists(doc.file_path):
+        raise HTTPException(status_code=404, detail="File not available on disk")
+    try:
+        pdf_bytes = await get_pdf_bytes(str(doc.id), doc.file_path, doc.doc_type, settings.GOTENBERG_URL)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"PDF conversion failed: {e}")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{doc_id}.pdf"'},
     )
 
 

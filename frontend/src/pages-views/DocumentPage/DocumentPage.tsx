@@ -6,6 +6,7 @@ import {
   getDocumentById,
   getDocumentChunks,
   getDocumentFileUrl,
+  getDocumentPreviewUrl,
 } from '@/api/documents';
 import FileTypeBadge from '@/components/FileTypeBadge/FileTypeBadge';
 import { timeAgo } from '@/utils/timeAgo';
@@ -95,7 +96,7 @@ export default function DocumentPage() {
   }
 
   const fileType = fileTypeFromDocType(doc.doc_type);
-  const fileUrl = id ? getDocumentFileUrl(id) : '';
+  const previewUrl = id ? getDocumentPreviewUrl(id) : '';
 
   return (
     <div className={styles.page}>
@@ -149,35 +150,11 @@ export default function DocumentPage() {
 
       <div className={styles.contentArea}>
         {tab === 'preview' && (
-          fileType === 'pdf' ? (
-            <iframe
-              src={fileUrl}
-              className={styles.pdfFrame}
-              title={doc.title}
-            />
-          ) : (
-            <div className={styles.noPreview}>
-              <p className={styles.noPreviewTitle}>
-                Preview not available for .{fileType} files
-              </p>
-              <p className={styles.noPreviewText}>
-                Rich preview for Word and PowerPoint documents is coming soon.
-                Download the file or use the Text Content tab to read the extracted text.
-              </p>
-              <div className={styles.noPreviewActions}>
-                <button className={styles.switchBtn} onClick={() => setTab('text')}>
-                  View Text Content →
-                </button>
-                <button
-                  className={styles.switchBtn}
-                  onClick={handleDownload}
-                  disabled={downloading}
-                >
-                  {downloading ? 'Downloading…' : '↓ Download'}
-                </button>
-              </div>
-            </div>
-          )
+          <iframe
+            src={previewUrl}
+            className={styles.pdfFrame}
+            title={doc.title}
+          />
         )}
 
         {tab === 'text' && (
