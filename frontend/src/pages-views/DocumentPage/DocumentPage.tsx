@@ -9,6 +9,7 @@ import {
   getDocumentPreviewUrl,
 } from '@/api/documents';
 import FileTypeBadge from '@/components/FileTypeBadge/FileTypeBadge';
+import DocumentSummaryPanel from '@/components/DocumentSummaryPanel/DocumentSummaryPanel';
 import { timeAgo } from '@/utils/timeAgo';
 import type { FileType } from '@/types';
 import styles from './DocumentPage.module.scss';
@@ -133,43 +134,54 @@ export default function DocumentPage() {
         </div>
       </div>
 
-      <div className={styles.tabBar}>
-        <button
-          className={`${styles.tabBtn} ${tab === 'preview' ? styles.tabBtnActive : ''}`}
-          onClick={() => setTab('preview')}
-        >
-          Preview
-        </button>
-        <button
-          className={`${styles.tabBtn} ${tab === 'text' ? styles.tabBtnActive : ''}`}
-          onClick={() => setTab('text')}
-        >
-          Text Content
-        </button>
-      </div>
+      <div className={styles.splitLayout}>
+        <div className={styles.mainColumn}>
+          <div className={styles.tabBar}>
+            <button
+              className={`${styles.tabBtn} ${tab === 'preview' ? styles.tabBtnActive : ''}`}
+              onClick={() => setTab('preview')}
+            >
+              Preview
+            </button>
+            <button
+              className={`${styles.tabBtn} ${tab === 'text' ? styles.tabBtnActive : ''}`}
+              onClick={() => setTab('text')}
+            >
+              Text Content
+            </button>
+          </div>
 
-      <div className={styles.contentArea}>
-        {tab === 'preview' && (
-          <iframe
-            src={previewUrl}
-            className={styles.pdfFrame}
-            title={doc.title}
-          />
-        )}
+          <div className={styles.contentArea}>
+            {tab === 'preview' && (
+              <iframe
+                src={previewUrl}
+                className={styles.pdfFrame}
+                title={doc.title}
+              />
+            )}
 
-        {tab === 'text' && (
-          <div className={styles.textContent}>
-            {chunks.length === 0 ? (
-              <p className={styles.noChunks}>No text content available for this document.</p>
-            ) : (
-              chunks.map((chunk) => (
-                <p key={chunk.chunk_index} className={styles.chunk}>
-                  {chunk.content}
-                </p>
-              ))
+            {tab === 'text' && (
+              <div className={styles.textContent}>
+                {chunks.length === 0 ? (
+                  <p className={styles.noChunks}>No text content available for this document.</p>
+                ) : (
+                  chunks.map((chunk) => (
+                    <p key={chunk.chunk_index} className={styles.chunk}>
+                      {chunk.content}
+                    </p>
+                  ))
+                )}
+              </div>
             )}
           </div>
-        )}
+        </div>
+
+        <aside className={styles.sideColumn}>
+          <div className={styles.summaryHeader}>AI Summary</div>
+          <div className={styles.summaryContent}>
+            {id && <DocumentSummaryPanel documentId={id} />}
+          </div>
+        </aside>
       </div>
     </div>
   );

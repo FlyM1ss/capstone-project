@@ -20,7 +20,6 @@ export default function DocumentCard({ document }: Props) {
 
   return (
     <Link to={`/document/${document.id}`} className={styles.card} onClick={() => recordVisit(document)}>
-      <div className={styles.thumbnail} aria-hidden="true" />
       <div className={styles.info}>
         <span className={styles.name}>{document.name}</span>
         <span className={styles.meta}>edited {timeAgo(document.editedAt)}</span>

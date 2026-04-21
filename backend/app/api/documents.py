@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
@@ -10,9 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.deps import get_db_session
 from app.models.db import Document, DocumentChunk
-from app.models.schemas import DocumentOut, DocumentUploadResponse, DocumentChunksResponse, ChunkOut
+from app.models.schemas import DocumentOut, DocumentUploadResponse, DocumentChunksResponse, ChunkOut, SummaryResponse
 from app.services.ingestion import ingest_document
 from app.services.pdf_conversion import get_pdf_bytes, invalidate_cache
+from app.services.summarizer import generate_summary
 
 router = APIRouter()
 
@@ -145,4 +147,42 @@ async def get_document_chunks(doc_id: uuid.UUID, db: AsyncSession = Depends(get_
     return DocumentChunksResponse(
         document_id=doc_id,
         chunks=[ChunkOut(chunk_index=c.chunk_index, content=c.content) for c in chunks],
+    )
+
+
+@router.get("/documents/{doc_id}/summary", response_model=SummaryResponse)
+async def get_document_summary(doc_id: uuid.UUID, db: AsyncSession = Depends(get_db_session)):
+    result = await db.execute(select(Document).where(Document.id == doc_id))
+    doc = result.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if doc.summary:
+        return SummaryResponse(
+            document_id=doc.id,
+            summary=doc.summary,
+            cached=True,
+            generated_at=doc.summary_generated_at,
+        )
+
+    chunks_result = await db.execute(
+        select(DocumentChunk)
+        .where(DocumentChunk.document_id == doc_id)
+        .order_by(DocumentChunk.chunk_index)
+    )
+    chunks = chunks_result.scalars().all()
+    if not chunks:
+        return SummaryResponse(
+            document_id=doc.id, summary=None, cached=False, generated_at=None,
+        )
+
+    summary_text = await generate_summary(doc, list(chunks))
+
+    now = datetime.now(timezone.utc)
+    doc.summary = summary_text
+    doc.summary_generated_at = now
+    await db.commit()
+
+    return SummaryResponse(
+        document_id=doc.id, summary=summary_text, cached=False, generated_at=now,
     )

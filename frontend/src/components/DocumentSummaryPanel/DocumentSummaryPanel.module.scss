@@ -1,0 +1,85 @@
+@use '@/_variables.scss' as *;
+
+.panel {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-md;
+  padding: 20px 22px;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+// ── Loaded: bullet list ─────────────────────────────────────
+.bulletList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bullet {
+  position: relative;
+  padding-left: 18px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-primary);
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 10px;
+    width: 5px;
+    height: 5px;
+    background-color: var(--text-accent);
+    border-radius: $border-radius-full;
+  }
+}
+
+// ── Loading: skeleton shimmer ───────────────────────────────
+.skeletonList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.skeletonLine {
+  height: 12px;
+  border-radius: $border-radius-xs;
+  background: linear-gradient(
+    90deg,
+    var(--bg-hover) 0%,
+    var(--border-color-light) 50%,
+    var(--bg-hover) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+.skeletonHint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+// ── Empty / error states ────────────────────────────────────
+.noContent,
+.errorText {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 24px 0;
+}

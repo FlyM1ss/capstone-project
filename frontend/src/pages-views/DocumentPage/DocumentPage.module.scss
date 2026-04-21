@@ -4,8 +4,56 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  max-width: 860px;
+  max-width: 1280px;
   padding-bottom: 60px;
+}
+
+// ── Split layout: main content left, AI summary right ─────
+.splitLayout {
+  display: grid;
+  grid-template-columns: 1fr minmax(300px, 360px);
+  gap: 28px;
+  align-items: start;
+}
+
+.mainColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0; // prevent PDF iframe from pushing grid
+}
+
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+// AI Summary header — mirrors the tab-bar row so its text baseline
+// aligns with "Preview" / "Text Content" and the bottom divider sits
+// on the same horizontal line.
+// .tabBtn contributes 8px + text + 8px padding + 2px transparent accent
+// border before the tab-bar's own 1px border-bottom. We emulate that
+// with padding-bottom: 10px (= 8 + the 2px the accent reserves).
+.summaryHeader {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 8px 4px 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.summaryContent {
+  display: block;
+}
+
+@media (max-width: 1100px) {
+  .splitLayout {
+    grid-template-columns: 1fr;
+  }
 }
 
 // ── Back button ──────────────────────────────────────────

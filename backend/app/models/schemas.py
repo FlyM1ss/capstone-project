@@ -77,6 +77,13 @@ class DocumentChunksResponse(BaseModel):
     chunks: list[ChunkOut]
 
 
+class SummaryResponse(BaseModel):
+    document_id: UUID
+    summary: str | None
+    cached: bool
+    generated_at: datetime | None
+
+
 # --- Auth ---
 class UserOut(BaseModel):
     id: UUID

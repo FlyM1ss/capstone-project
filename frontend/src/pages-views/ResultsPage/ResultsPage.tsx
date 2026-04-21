@@ -2,12 +2,29 @@ import { useEffect, useState, useTransition } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Document, FileType, SearchFilters, SearchRequest } from '@/types';
 import { searchDocuments } from '@/api/search';
+import { ApiError } from '@/api/client';
 import { getCachedSearch, setCachedSearch } from '@/api/searchCache';
 import { FILE_TYPES } from '@/constants/filters';
 import SearchBar from '@/components/SearchBar/SearchBar';
 import FilterControls from '@/components/FilterControls/FilterControls';
 import ResultItem from '@/components/ResultItem/ResultItem';
 import styles from './ResultsPage.module.scss';
+
+function describeSearchError(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.errorCode === 'embedding_service_unavailable') {
+      return 'Search is temporarily unavailable — the embedding service is offline. Please try again in a moment.';
+    }
+    if (err.status === 503) {
+      return err.detail ?? 'Search service is temporarily unavailable. Please try again shortly.';
+    }
+    if (err.status >= 500) {
+      return err.detail ?? `Search failed with a server error (${err.status}).`;
+    }
+    return err.detail ?? `Search failed (${err.status}).`;
+  }
+  return 'Could not reach the search backend. Check that it is running.';
+}
 
 export default function ResultsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -56,7 +73,7 @@ export default function ResultsPage() {
         setCachedSearch(request, res);
       } catch (err) {
         console.error('Search failed:', err);
-        setError('Search failed. Make sure the backend is running.');
+        setError(describeSearchError(err));
         setResults([]);
         setTotalCount(0);
       }

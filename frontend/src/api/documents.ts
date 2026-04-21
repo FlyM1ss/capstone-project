@@ -65,3 +65,14 @@ export function getDocumentFileUrl(id: string): string {
 export function getDocumentPreviewUrl(id: string): string {
   return `${BASE_URL}/api/documents/${id}/preview`;
 }
+
+export interface DocumentSummary {
+  document_id: string;
+  summary: string | null;
+  cached: boolean;
+  generated_at: string | null;
+}
+
+export async function getDocumentSummary(id: string): Promise<DocumentSummary> {
+  return apiGet<DocumentSummary>(`/api/documents/${id}/summary`);
+}

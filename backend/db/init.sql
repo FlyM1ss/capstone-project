@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS documents (
     document_group TEXT,
     version INTEGER DEFAULT 1 CHECK (version >= 1),
     content_hash TEXT,
+    summary TEXT,
+    summary_generated_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT uq_document_group_version UNIQUE (document_group, version)
 );

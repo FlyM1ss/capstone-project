@@ -19,14 +19,6 @@
   }
 }
 
-.thumbnail {
-  width: 36px;
-  height: 36px;
-  border-radius: $border-radius-xs;
-  background-color: var(--bg-avatar-placeholder);
-  flex-shrink: 0;
-}
-
 .info {
   display: flex;
   flex-direction: column;
