@@ -50,7 +50,7 @@ curl -X POST http://localhost:8000/api/search \
 curl -X POST http://localhost:8000/api/documents -F "file=@path/to/file.pdf"
 
 # === Software engineering deliverable ===
-cd software-engineering && python3 build_docx.py
+cd coursework/software-engineering && python3 build_docx.py
 ```
 
 ## Architecture
@@ -111,12 +111,12 @@ api/ (FastAPI routers) → services/ (business logic) → models/ (SQLAlchemy OR
 | `db`        | paradedb/paradedb  | 5432 | Runs `init.sql` on first start, `pgdata` volume             |
 | `embedding` | `./embedding.Dockerfile` | 8001 | CUDA PyTorch + GPU passthrough, Qwen3-Embedding-0.6B, `hf_cache` volume |
 | `backend`   | `./backend`        | 8000 | Auto-ingests on first start, mounts `./data`                 |
-| `frontend`  | `./Fetch`          | 3000 | Bun-based dev container                                      |
+| `frontend`  | `./frontend`       | 3000 | Bun-based dev container                                      |
 
 ## Secrets
 
 - `.env` (root) — Database creds, Cohere API key, NextAuth secret, embedding URL. Copy from `.env.example`.
-- `credentials.json` / `token.json` (in `software-engineering/`) — Google OAuth, gitignored.
+- `credentials.json` / `token.json` (in `coursework/software-engineering/`) — Google OAuth, gitignored.
 - Never commit `.env`, API keys, or credential files.
 
 ## Conventions
@@ -124,5 +124,5 @@ api/ (FastAPI routers) → services/ (business logic) → models/ (SQLAlchemy OR
 - Monorepo: `frontend/` and `backend/` are sibling directories, orchestrated by Docker Compose
 - Backend uses raw SQL (`sqlalchemy.text()`) for search queries, ORM for document/user CRUD
 - Frontend API types in `lib/api.ts` mirror backend Pydantic schemas in `models/schemas.py` — keep in sync
-- Diagram source of truth is `.mmd` files in `software-engineering/diagrams/`
+- Diagram source of truth is `.mmd` files in `coursework/software-engineering/diagrams/`
 - No test framework is set up yet (`backend/tests/` contains only `__init__.py`)

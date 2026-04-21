@@ -1,10 +1,14 @@
-FROM oven/bun:1-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package.json bun.lock* ./
-RUN bun install
+COPY package.json package-lock.json ./
+RUN npm ci
 
 COPY . .
 
-CMD ["bun", "run", "dev"]
+EXPOSE 3000
+
+# Dev server: reads NEXT_PUBLIC_* env vars at startup (fine for dev/demo).
+# For production, replace with: RUN npm run build && CMD ["npm", "start"]
+CMD ["npm", "run", "dev"]
