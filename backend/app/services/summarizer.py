@@ -11,6 +11,16 @@ MODEL = "command-r-08-2024"
 MAX_INPUT_CHARS = 8000
 TEMPERATURE = 0.3
 
+_async_client: cohere.AsyncClient | None = None
+
+
+def _get_client() -> cohere.AsyncClient:
+    """Lazily constructed module-level client — reuses HTTP connection pool across requests."""
+    global _async_client
+    if _async_client is None:
+        _async_client = cohere.AsyncClient(settings.COHERE_API_KEY)
+    return _async_client
+
 
 class SummarizerUnavailable(Exception):
     """Raised when the summarizer cannot produce a summary.
@@ -47,13 +57,11 @@ def _normalize_bullets(raw: str) -> str:
         stripped = line.lstrip()
         if not stripped:
             continue
-        # Accept -, •, *, or numeric prefix; normalize to "- "
         if stripped.startswith(("- ", "* ", "• ")):
             bullets.append("- " + stripped[2:].strip())
         elif stripped[:2].rstrip(".").isdigit() and ". " in stripped[:4]:
             bullets.append("- " + stripped.split(". ", 1)[1].strip())
         elif bullets:
-            # Continuation of previous bullet — append with space.
             bullets[-1] += " " + stripped
     return "\n".join(bullets)
 
@@ -79,8 +87,7 @@ async def generate_summary(document: Document, chunks: list[DocumentChunk]) -> s
     prompt = _build_prompt(document.title, document.author, content)
 
     try:
-        co = cohere.AsyncClient(settings.COHERE_API_KEY)
-        response = await co.chat(
+        response = await _get_client().chat(
             model=MODEL,
             message=prompt,
             temperature=TEMPERATURE,

@@ -46,10 +46,6 @@
   border-bottom: 1px solid var(--border-color);
 }
 
-.summaryContent {
-  display: block;
-}
-
 @media (max-width: 1100px) {
   .splitLayout {
     grid-template-columns: 1fr;

@@ -17,9 +17,6 @@ logger = logging.getLogger("uvicorn.error")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with async_session() as db:
-        await db.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS summary TEXT"))
-        await db.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS summary_generated_at TIMESTAMPTZ"))
-        await db.commit()
         result = await db.execute(text("SELECT count(*) FROM documents"))
         count = result.scalar()
     logger.info("Database has %d documents", count)

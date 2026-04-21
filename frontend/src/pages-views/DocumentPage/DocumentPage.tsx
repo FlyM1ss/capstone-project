@@ -178,9 +178,7 @@ export default function DocumentPage() {
 
         <aside className={styles.sideColumn}>
           <div className={styles.summaryHeader}>AI Summary</div>
-          <div className={styles.summaryContent}>
-            {id && <DocumentSummaryPanel documentId={id} />}
-          </div>
+          {id && <DocumentSummaryPanel documentId={id} />}
         </aside>
       </div>
     </div>

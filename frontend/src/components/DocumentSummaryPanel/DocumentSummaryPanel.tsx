@@ -23,7 +23,16 @@ function parseBullets(raw: string): string[] {
     .filter((line) => line.length > 0);
 }
 
+function getErrorMessage(err: unknown): string {
+  if (!(err instanceof ApiError)) return 'Could not load summary.';
+  if (err.body?.error_code === 'summarizer_unavailable') {
+    return 'Summary service is unavailable right now.';
+  }
+  return err.detail ?? 'Could not load summary.';
+}
+
 const SLOW_CALL_THRESHOLD_MS = 6000;
+const SKELETON_WIDTHS = [92, 78, 85, 70, 88];
 
 export default function DocumentSummaryPanel({ documentId }: Props) {
   const [state, setState] = useState<State>({ kind: 'loading' });
@@ -52,13 +61,7 @@ export default function DocumentSummaryPanel({ documentId }: Props) {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        const message =
-          err instanceof ApiError
-            ? err.body?.error_code === 'summarizer_unavailable'
-              ? 'Summary service is unavailable right now.'
-              : err.detail ?? 'Could not load summary.'
-            : 'Could not load summary.';
-        setState({ kind: 'error', message });
+        setState({ kind: 'error', message: getErrorMessage(err) });
       });
 
     return () => {
@@ -71,11 +74,9 @@ export default function DocumentSummaryPanel({ documentId }: Props) {
     <div className={styles.panel}>
       {state.kind === 'loading' && (
         <div className={styles.skeletonList} aria-label="Generating summary">
-          <div className={styles.skeletonLine} style={{ width: '92%' }} />
-          <div className={styles.skeletonLine} style={{ width: '78%' }} />
-          <div className={styles.skeletonLine} style={{ width: '85%' }} />
-          <div className={styles.skeletonLine} style={{ width: '70%' }} />
-          <div className={styles.skeletonLine} style={{ width: '88%' }} />
+          {SKELETON_WIDTHS.map((w, i) => (
+            <div key={i} className={styles.skeletonLine} style={{ width: `${w}%` }} />
+          ))}
           <div className={styles.skeletonHint} aria-live="polite">
             {slow ? 'This is taking longer than usual…' : 'Generating summary…'}
           </div>

@@ -170,18 +170,16 @@ async def get_document_summary(doc_id: uuid.UUID, db: AsyncSession = Depends(get
         .where(DocumentChunk.document_id == doc_id)
         .order_by(DocumentChunk.chunk_index)
     )
-    chunks = chunks_result.scalars().all()
-    if not chunks:
-        return SummaryResponse(
-            document_id=doc.id, summary=None, cached=False, generated_at=None,
-        )
+    chunks = list(chunks_result.scalars().all())
 
-    summary_text = await generate_summary(doc, list(chunks))
-
-    now = datetime.now(timezone.utc)
-    doc.summary = summary_text
-    doc.summary_generated_at = now
-    await db.commit()
+    summary_text: str | None = None
+    now: datetime | None = None
+    if chunks:
+        summary_text = await generate_summary(doc, chunks)
+        now = datetime.now(timezone.utc)
+        doc.summary = summary_text
+        doc.summary_generated_at = now
+        await db.commit()
 
     return SummaryResponse(
         document_id=doc.id, summary=summary_text, cached=False, generated_at=now,
