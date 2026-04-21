@@ -23,12 +23,19 @@ function parseBullets(raw: string): string[] {
     .filter((line) => line.length > 0);
 }
 
+const SLOW_CALL_THRESHOLD_MS = 6000;
+
 export default function DocumentSummaryPanel({ documentId }: Props) {
   const [state, setState] = useState<State>({ kind: 'loading' });
+  const [slow, setSlow] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setState({ kind: 'loading' });
+    setSlow(false);
+    const slowTimer = window.setTimeout(() => {
+      if (!cancelled) setSlow(true);
+    }, SLOW_CALL_THRESHOLD_MS);
 
     getDocumentSummary(documentId)
       .then((res: DocumentSummary) => {
@@ -56,6 +63,7 @@ export default function DocumentSummaryPanel({ documentId }: Props) {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(slowTimer);
     };
   }, [documentId]);
 
@@ -68,7 +76,9 @@ export default function DocumentSummaryPanel({ documentId }: Props) {
           <div className={styles.skeletonLine} style={{ width: '85%' }} />
           <div className={styles.skeletonLine} style={{ width: '70%' }} />
           <div className={styles.skeletonLine} style={{ width: '88%' }} />
-          <div className={styles.skeletonHint}>Generating summary…</div>
+          <div className={styles.skeletonHint} aria-live="polite">
+            {slow ? 'This is taking longer than usual…' : 'Generating summary…'}
+          </div>
         </div>
       )}
 
