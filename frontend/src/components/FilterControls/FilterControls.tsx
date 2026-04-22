@@ -41,7 +41,7 @@ export default function FilterControls({ filters, onToggleType, onSetDateRange, 
   return (
     <>
       <FilterChip
-        label="type"
+        label="Document Type"
         isActive={filters.types.length < FILE_TYPES.length}
         icon={<FileIcon />}
       >
