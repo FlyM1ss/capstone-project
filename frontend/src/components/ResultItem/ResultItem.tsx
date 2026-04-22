@@ -3,40 +3,14 @@ import { Document } from '@/types';
 import FileTypeBadge from '@/components/FileTypeBadge/FileTypeBadge';
 import { timeAgo } from '@/utils/timeAgo';
 import { useDocuments } from '@/context/DocumentsContext';
-import { useDocumentSummary } from '@/context/SummaryCacheContext';
 import styles from './ResultItem.module.scss';
 
 interface Props {
   document: Document;
-  isSummaryOpen?: boolean;
-  onToggleSummary?: (doc: Document) => void;
 }
 
-// Label is a pure function of (panel open?, cache entry status).
-// - never fetched + closed  → "Summarize"
-// - fetching + open         → "Generating"
-// - fetching + closed       → "See Summary" (keeps running in background)
-// - loaded + open           → "Summarized"
-// - loaded + closed         → "See Summary"
-// - error + open            → "Summarize" (inviting retry)
-// - error + closed          → "Summarize"
-function summarizeLabel(
-  isOpen: boolean,
-  status: 'idle' | 'loading' | 'loaded' | 'error',
-): string {
-  if (isOpen) {
-    if (status === 'loaded') return 'Summarized';
-    if (status === 'loading') return 'Generating';
-    return 'Summarize';
-  }
-  if (status === 'loaded' || status === 'loading') return 'See Summary';
-  return 'Summarize';
-}
-
-export default function ResultItem({ document, isSummaryOpen, onToggleSummary }: Props) {
+export default function ResultItem({ document }: Props) {
   const { recordVisit, togglePin } = useDocuments();
-  const entry = useDocumentSummary(document.id);
-  const status: 'idle' | 'loading' | 'loaded' | 'error' = entry?.status ?? 'idle';
 
   const handlePin = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -44,32 +18,11 @@ export default function ResultItem({ document, isSummaryOpen, onToggleSummary }:
     togglePin(document);
   };
 
-  const handleSummarize = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onToggleSummary?.(document);
-  };
-
-  const open = !!isSummaryOpen;
-  const label = summarizeLabel(open, status);
-  const isBusy = open && status === 'loading';
-
   return (
     <Link to={`/document/${document.id}`} className={styles.item} onClick={() => recordVisit(document)}>
       <div className={styles.header}>
         <h3 className={styles.title}>{document.name}</h3>
         <div className={styles.headerActions}>
-          {onToggleSummary && (
-            <button
-              type="button"
-              className={`${styles.summarize} ${open ? styles.summarizeActive : ''}`}
-              onClick={handleSummarize}
-              aria-pressed={open}
-            >
-              {isBusy && <span className={styles.summarizeSpinner} aria-hidden="true" />}
-              <span>{label}</span>
-            </button>
-          )}
           <FileTypeBadge fileType={document.fileType} />
           <button
             type="button"

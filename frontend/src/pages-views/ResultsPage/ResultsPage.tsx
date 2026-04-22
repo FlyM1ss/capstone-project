@@ -8,8 +8,6 @@ import { FILE_TYPES } from '@/constants/filters';
 import SearchBar from '@/components/SearchBar/SearchBar';
 import FilterControls from '@/components/FilterControls/FilterControls';
 import ResultItem from '@/components/ResultItem/ResultItem';
-import DocumentSummaryPanel from '@/components/DocumentSummaryPanel/DocumentSummaryPanel';
-import { useSummaryCache } from '@/context/SummaryCacheContext';
 import styles from './ResultsPage.module.scss';
 
 function describeSearchError(err: unknown): string {
@@ -56,19 +54,6 @@ export default function ResultsPage() {
   );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [activeSummaryId, setActiveSummaryId] = useState<string | null>(null);
-  const summaryCache = useSummaryCache();
-
-  const handleToggleSummary = (doc: Document) => {
-    if (activeSummaryId === doc.id) {
-      setActiveSummaryId(null);
-      return;
-    }
-    setActiveSummaryId(doc.id);
-    summaryCache.ensure(doc.id).catch(() => {
-      // error surfaces via the cache entry; the panel renders it.
-    });
-  };
 
   useEffect(() => {
     if (!query) return;
@@ -94,13 +79,6 @@ export default function ResultsPage() {
       }
     });
   }, [query, typesParam, dateStart, dateEnd, authorizedParam]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Close the summary panel whenever the result set changes — the active doc
-  // may no longer be on screen, and the panel next to an unrelated list feels
-  // stale.
-  useEffect(() => {
-    setActiveSummaryId(null);
-  }, [query, typesParam, dateStart, dateEnd, authorizedParam]);
 
   function updateParams(updates: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams);
@@ -143,52 +121,36 @@ export default function ResultsPage() {
         </div>
       </div>
 
-      <div className={activeSummaryId ? styles.splitLayout : undefined}>
-        <div className={styles.mainColumn}>
-          <div className={styles.resultsArea}>
-            {isPending ? (
-              <div className={styles.loading}>
-                <div className={styles.spinner} />
-                <span>Searching...</span>
-              </div>
-            ) : error ? (
-              <div className={styles.empty}>
-                <p className={styles.emptyTitle}>Connection Error</p>
-                <p className={styles.emptyText}>{error}</p>
-              </div>
-            ) : results.length > 0 ? (
-              <>
-                <p className={styles.resultCount}>
-                  {totalCount} result{totalCount !== 1 ? 's' : ''} for &ldquo;{query}&rdquo;
-                </p>
-                <div className={styles.resultsList}>
-                  {results.map((doc) => (
-                    <ResultItem
-                      key={doc.id}
-                      document={doc}
-                      isSummaryOpen={activeSummaryId === doc.id}
-                      onToggleSummary={handleToggleSummary}
-                    />
-                  ))}
-                </div>
-              </>
-            ) : query ? (
-              <div className={styles.empty}>
-                <p className={styles.emptyTitle}>No results found</p>
-                <p className={styles.emptyText}>
-                  Try adjusting your search or filters for &ldquo;{query}&rdquo;
-                </p>
-              </div>
-            ) : null}
+      <div className={styles.resultsArea}>
+        {isPending ? (
+          <div className={styles.loading}>
+            <div className={styles.spinner} />
+            <span>Searching...</span>
           </div>
-        </div>
-
-        {activeSummaryId && (
-          <aside className={styles.sideColumn}>
-            <div className={styles.summaryHeader}>AI Summary</div>
-            <DocumentSummaryPanel documentId={activeSummaryId} />
-          </aside>
-        )}
+        ) : error ? (
+          <div className={styles.empty}>
+            <p className={styles.emptyTitle}>Connection Error</p>
+            <p className={styles.emptyText}>{error}</p>
+          </div>
+        ) : results.length > 0 ? (
+          <>
+            <p className={styles.resultCount}>
+              {totalCount} result{totalCount !== 1 ? 's' : ''} for &ldquo;{query}&rdquo;
+            </p>
+            <div className={styles.resultsList}>
+              {results.map((doc) => (
+                <ResultItem key={doc.id} document={doc} />
+              ))}
+            </div>
+          </>
+        ) : query ? (
+          <div className={styles.empty}>
+            <p className={styles.emptyTitle}>No results found</p>
+            <p className={styles.emptyText}>
+              Try adjusting your search or filters for &ldquo;{query}&rdquo;
+            </p>
+          </div>
+        ) : null}
       </div>
     </div>
   );

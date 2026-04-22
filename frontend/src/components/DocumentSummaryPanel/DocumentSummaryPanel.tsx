@@ -1,14 +1,20 @@
 import { useEffect, useState } from 'react';
-import { ApiError } from '@/api/client';
 import {
-  useDocumentSummary,
-  useSummaryCache,
-} from '@/context/SummaryCacheContext';
+  type DocumentSummary,
+  getDocumentSummary,
+} from '@/api/documents';
+import { ApiError } from '@/api/client';
 import styles from './DocumentSummaryPanel.module.scss';
 
 interface Props {
   documentId: string;
 }
+
+type State =
+  | { kind: 'loading' }
+  | { kind: 'empty' }
+  | { kind: 'loaded'; bullets: string[]; cached: boolean }
+  | { kind: 'error'; message: string };
 
 function parseBullets(raw: string): string[] {
   return raw
@@ -29,25 +35,44 @@ const SLOW_CALL_THRESHOLD_MS = 6000;
 const SKELETON_WIDTHS = [92, 78, 85, 70, 88];
 
 export default function DocumentSummaryPanel({ documentId }: Props) {
-  const cache = useSummaryCache();
-  const entry = useDocumentSummary(documentId);
+  const [state, setState] = useState<State>({ kind: 'loading' });
   const [slow, setSlow] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    setState({ kind: 'loading' });
     setSlow(false);
-    cache.ensure(documentId).catch(() => {
-      // error is captured in the cache entry; swallow to avoid an
-      // unhandled-rejection warning when no UI caller awaits the Promise.
-    });
-    const t = window.setTimeout(() => setSlow(true), SLOW_CALL_THRESHOLD_MS);
-    return () => window.clearTimeout(t);
-  }, [documentId, cache]);
+    const slowTimer = window.setTimeout(() => {
+      if (!cancelled) setSlow(true);
+    }, SLOW_CALL_THRESHOLD_MS);
 
-  const isLoading = !entry || entry.status === 'loading';
+    getDocumentSummary(documentId)
+      .then((res: DocumentSummary) => {
+        if (cancelled) return;
+        if (!res.summary) {
+          setState({ kind: 'empty' });
+          return;
+        }
+        setState({
+          kind: 'loaded',
+          bullets: parseBullets(res.summary),
+          cached: res.cached,
+        });
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setState({ kind: 'error', message: getErrorMessage(err) });
+      });
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(slowTimer);
+    };
+  }, [documentId]);
 
   return (
     <div className={styles.panel}>
-      {isLoading && (
+      {state.kind === 'loading' && (
         <div className={styles.skeletonList} aria-label="Generating summary">
           {SKELETON_WIDTHS.map((w, i) => (
             <div key={i} className={styles.skeletonLine} style={{ width: `${w}%` }} />
@@ -58,17 +83,17 @@ export default function DocumentSummaryPanel({ documentId }: Props) {
         </div>
       )}
 
-      {entry?.status === 'error' && (
-        <p className={styles.errorText}>{getErrorMessage(entry.error)}</p>
-      )}
-
-      {entry?.status === 'loaded' && !entry.summary && (
+      {state.kind === 'empty' && (
         <p className={styles.noContent}>No content to summarize.</p>
       )}
 
-      {entry?.status === 'loaded' && entry.summary && (
+      {state.kind === 'error' && (
+        <p className={styles.errorText}>{state.message}</p>
+      )}
+
+      {state.kind === 'loaded' && (
         <ul className={styles.bulletList}>
-          {parseBullets(entry.summary).map((b, i) => (
+          {state.bullets.map((b, i) => (
             <li key={i} className={styles.bullet}>
               {b}
             </li>
