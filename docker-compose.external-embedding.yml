@@ -1,0 +1,10 @@
+# External embedding override.
+# Usage:
+#   1) Set EMBEDDING_API_URL to your hosted endpoint (for example, Colab + ngrok):
+#      EMBEDDING_API_URL=https://<your-host>/embed
+#   2) Start stack without local embedding container:
+#      docker compose -f docker-compose.yml -f docker-compose.external-embedding.yml up -d
+services:
+  embedding:
+    profiles:
+      - local-embedding

@@ -42,7 +42,7 @@ Note: for ingestion rows, put the exact CLI command in the "Query used" field.
 
 | Test ID | File type & file name | Query used (exact string sent) | Expected result | Actual result | Status | Failure category |
 |---|---|---|---|---|---|---|
-| ING-01 | N/A (pipeline): `data/generic`, `data/auxiliary` | `docker compose exec backend python -m app.scripts.ingest_all` | Clean mode ingests from generic + auxiliary; summary prints totals and completes without crash. |  |  |  |
+| ING-01 | N/A (pipeline): `data/generic`, `data/auxiliary` | `docker compose exec backend python -m app.scripts.ingest_all` | Clean mode ingests from generic + auxiliary; summary prints totals and completes without crash. | Clean mode ingests from generic + auxiliary; summary prints totals and completes without crash. | Pass Test | N/A |
 | ING-02 | N/A (pipeline): `data/malformed`, `data/prompt-injected`, `data/poisoned` | `docker compose exec backend python -m app.scripts.ingest_all --poisoned` | Adversarial mode scans malformed + prompt-injected + legacy poisoned folders; script completes even if some files error. |  |  |  |
 | ING-03 | N/A (pipeline): all enabled folders | `docker compose exec backend python -m app.scripts.ingest_all --all` | Ingests all configured folders; summary printed at end. |  |  |  |
 | ING-04 | N/A (pipeline): malformed only | `docker compose exec backend python -m app.scripts.ingest_all --mode malformed` | Only malformed folder is targeted. |  |  |  |
@@ -60,10 +60,10 @@ Note: for ingestion rows, put the exact CLI command in the "Query used" field.
 ### A) Baseline Cross-Format Retrieval
 | Test ID | File type & file name | Query used (exact string sent) | Expected result | Actual result | Status | Failure category |
 |---|---|---|---|---|---|---|
-| Q-001 | DOCX: `Remote_Work_Policy_v2.docx` | `What is the remote work policy?` | Top results include remote work policy (prefer latest version when `show_latest_only=true`). |  |  |  |
-| Q-002 | DOCX: `Password_and_Authentication_Standards.docx` | `password requirements and multi-factor authentication` | Returns password/authentication policy-related docs with strong relevance. |  |  |  |
-| Q-003 | DOCX/PDF: `Whistleblower_and_Non_Retaliation_Policy_v2.docx`, `Code_of_Business_Conduct_and_Ethics.docx` | `How do I report unethical behavior?` | Retrieves whistleblower/code-of-conduct docs semantically. |  |  |  |
-| Q-004 | PPTX: `Q3_2025_Business_Review.pptx` | `Q3 2025 revenue and business performance` | Retrieves Q3 business review presentation near top. |  |  |  |
+| Q-001 | DOCX: `Remote_Work_Policy_v2.docx` | `What is the remote work policy?` | Top results include remote work policy (prefer latest version when `show_latest_only=true`). | Remote work policy v2 is top result | Pass | N/A |
+| Q-002 | DOCX: `Password_and_Authentication_Standards.docx` | `password requirements and multi-factor authentication` | Returns password/authentication policy-related docs with strong relevance. | Returns Password_and_Authentication_Standards doc (appendix are also included for mentioning topic) | Pass | N/A |
+| Q-003 | DOCX/PDF: `Whistleblower_and_Non_Retaliation_Policy_v2.docx`, `Code_of_Business_Conduct_and_Ethics.docx` | `How do I report unethical behavior?` | Retrieves whistleblower/code-of-conduct docs semantically. | Returns Code of Business Conduct and Ethics, Anti Harrassment and Discrimination Policy, Whistleblower and Non Retaliation policy v2, etc | Pass | N/A |
+| Q-004 | PPTX: `Q3_2025_Business_Review.pptx` | `Q3 2025 revenue and business performance` | Retrieves Q3 business review presentation near top. | Q3 business review presentation returned as top result | Pass | N/A |
 | Q-005 | PDF: `Health_and_Wellness_Benefits_Overview.pdf` | `employee benefits and wellness programs` | Retrieves wellness/benefits/leave docs; may also include generic appendix due broad overlap. |  |  |  |
 | Q-006 | PPTX: `Finance_Controls_Training.pptx` | `finance controls training topics` | Finds finance controls training deck and related finance docs. |  |  |  |
 | Q-007 | DOCX: `Payroll_Administration_Procedures.docx` | `payroll administration procedures and timelines` | Returns payroll procedures doc in top results. |  |  |  |
