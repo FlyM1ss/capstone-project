@@ -66,6 +66,49 @@
   color: var(--text-muted);
 }
 
+.summarize {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 3px 10px;
+  white-space: nowrap;
+  transition: background-color $transition-speed $transition-easing,
+    color $transition-speed $transition-easing,
+    border-color $transition-speed $transition-easing;
+
+  &:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
+}
+
+.summarizeActive {
+  color: var(--text-primary);
+  border-color: var(--text-accent);
+  background-color: var(--bg-hover);
+}
+
+.summarizeSpinner {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--border-color);
+  border-top-color: var(--text-accent);
+  border-radius: $border-radius-full;
+  animation: summarizeSpin 0.7s linear infinite;
+}
+
+@keyframes summarizeSpin {
+  to { transform: rotate(360deg); }
+}
+
 .pin {
   display: flex;
   align-items: center;
