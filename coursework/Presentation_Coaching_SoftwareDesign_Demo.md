@@ -38,52 +38,122 @@ The handoff from the NLP Security section becomes seamless: the teammate covered
 
 ---
 
-## 2. Script Outline (with Progressive Disclosure)
+## 2. Slide-by-Slide Script
 
-### Opening (~20 seconds)
+Four slides for Section 06, then straight into the demo. Total target: ~4–5 minutes.
 
-> "My teammate just showed you how we prevent bad inputs from reaching our system. I'll show you how the rest of the architecture enforces correctness after a *good* input arrives. Three diagrams. I'll use them as a map, not a script. One query, start to finish."
+| # | Slide | Purpose | ~Time |
+|---|-------|---------|-------|
+| 1 | "Magic" (real sequence diagram with cover box) | Disarming hook, set expectations | 25 sec |
+| 2 | Hero diagram | The whole section's argument | 2:30 |
+| 3 | Real sequence diagram (uncovered) | Rigor proof for the professor | 50 sec |
+| 4 | Component diagram | Deployment footprint, glance | 25 sec |
+| → | Transition into demo | Hand off | 15 sec |
 
-### Anchor Metaphor: The Consulting Research Desk
+---
 
-> "Think of this as how a great consulting research desk handles a question. A mediocre one hands it to one junior analyst. A great one runs three specialists in parallel, has a senior review their shortlist, and checks your clearance before handing anything back. That's this system."
+### Slide 1 — The "Magic" Slide (~25 sec)
 
-### Walking the Sequence Diagram
+Your teammate has just finished. You take the mic. Slide 1 appears: the full sequence diagram with a giant "MAGIC" box covering most of the components.
 
-For each stage: **business hook first, then one precise technical detail for the professor.**
+**Narration:**
+> "My teammate just showed you how we prevent bad inputs from reaching our system. I'll show you how the rest of the architecture enforces correctness *after* a good input arrives. This is what our backend actually looks like [gesture at slide]. If I tried to walk you through every arrow we'd be here until Friday, so for the next few minutes I'm replacing the 'magic' in the middle with a diagram you can actually reason about, and then we go straight to a live demo."
 
-#### Input Validation (FastAPI layer)
+**What this slide does:**
+- Disarms the audience. Everyone knows AI systems look overwhelming; acknowledging it first earns trust.
+- For the professor: signals you understand the real complexity and chose to abstract *deliberately*, as a communication choice.
+- For the consultants: a friendly wink that says "you're not expected to decode this, that's the point."
+- Sets up the hero diagram as the *answer*, not a shortcut.
+
+**Do not:**
+- Apologize ("sorry this is complicated"). The joke is confident, not defensive.
+- Explain any box on slide 1. They're not for reading, they're for scale.
+- Linger. One breath after your last word, advance.
+
+---
+
+### Slide 2 — The Hero Diagram (~2:30, the bulk of the section)
+
+This is the heart of Section 06. Every sentence earns its place because it ties a visible box to a business risk.
+
+**Anchor metaphor (deliver once, then walk the diagram):**
+
+> "Think of this as how a great consulting research desk handles a question. A mediocre one hands it to one junior analyst. A great one runs three specialists in parallel, has a senior review their shortlist, and checks your clearance before handing anything back. That's this system. Five stages, color-coded by pillar, left to right."
+
+Then trace the flow left-to-right. For each stage: **business hook first, one precise technical detail for the professor.**
+
+#### Lobby Checkpoint (Input Validator)
 - **Business:** "Security checkpoint at the lobby. Before any query hits our expensive AI models, we confirm it isn't malformed, adversarial, or oversized."
-- **Technical hook:** "This is where my teammate's validation layer plugs in at the API boundary."
+- **Technical hook:** "This is where my teammate's validation layer plugs in at the API boundary. On the diagram it's the amber box, the one gate between the outside world and anything that costs us money or data."
 
-#### Parallel Hybrid Retrieval
-- **Business:** "Three librarians searching simultaneously. One understands meaning, one finds exact terms, one checks document titles. In parallel, so thoroughness doesn't cost latency."
-- **Technical hook:** "Semantic uses HNSW on 1024-dimensional Qwen3 embeddings. Keyword uses ParadeDB's BM25, which extends Postgres with Tantivy, so we keep a single-database deployment instead of running a separate vector store."
-- **Why it matters:** "Pure semantic misses exact SKUs and acronyms. Pure keyword misses paraphrasing. You need both, running together."
+#### Parallel Hybrid Retrieval (Three Specialists)
+- **Business:** "Three specialists working simultaneously. The diagram labels them *Meaning*, *Exact-Match*, and *Intent*. Meaning handles paraphrasing, Exact-Match catches literal strings and IDs, Intent weighs the document title. In parallel, so thoroughness doesn't cost latency."
+- **Technical hook:** "Meaning uses HNSW on 1024-dimensional Qwen3 embeddings. Exact-Match uses ParadeDB's BM25, which extends Postgres with Tantivy, so we keep a single-database deployment instead of running a separate vector store. Intent reuses the embedding index on a dedicated title-embeddings table."
+- **Why it matters:** "Pure semantic misses exact SKUs and acronyms. Pure keyword misses paraphrasing. Pure title ignores the body. You need all three running together, which is what the blue layer on the diagram shows."
 
-#### RRF Merge
-- **Business:** "Consensus vote across the three lists. No single ranker dominates; documents strong across multiple lists rise."
-- **Technical hook:** "Reciprocal Rank Fusion, k=60, with a 1.5x boost on title matches because title relevance is the strongest intent signal we have."
+#### Consensus Vote (RRF Merge)
+- **Business:** "Consensus vote across the three specialists. No single ranker dominates; documents strong across multiple lists rise."
+- **Technical hook:** "Reciprocal Rank Fusion, k=60, with a 1.5x boost on title matches because title relevance is the strongest intent signal we have. Those parameters are deliberately *not* on the hero diagram. Say them aloud for the professor, skip them for the consultants."
 
-#### Cohere Rerank v3.5
+#### Senior Expert Review (Cohere Rerank v3.5)
 - **Business:** "The shortlist goes to a senior expert who reads each candidate *with the query in mind* and re-sorts. Only the top 50 reach this stage because per-call cost is nontrivial."
-- **Why it matters:** "This is what makes the top-3 feel uncannily right instead of just plausibly related. It's the difference between 'search' and 'answers.'"
+- **Why it matters:** "This is what makes the top-3 feel uncannily right instead of just plausibly related. It's the difference between 'search' and 'answers.' On the diagram it's the green box. The entire precision pillar lives in that one stage."
 
-#### RBAC + Version Filter
-- **Business:** "Compliance officer and archivist. Before results reach the user, we strip out unauthorized content and hide superseded document versions."
+#### Compliance Filter (RBAC + Version)
+- **Business:** "Compliance officer and archivist in one step. Before results reach the user, we strip out unauthorized content and hide superseded document versions. The diagram collapses them into one red box because they're enforced together, but verbally I call out both jobs so each enforcement point is vivid."
 - **Deloitte-specific hook:** "At a consulting firm, showing an analyst a confidential client memo or the v1 of a deliverable that's now at v4 is a real liability. It's enforced at the architecture layer, not bolted on."
 
-### Progressive Disclosure Technique
+**Delivery technique while on this slide:**
 
-The three diagrams should stay on screen as a **visual anchor**, but trace a *single query's path through them with a pointer or cursor*. Don't read boxes.
-
+The hero diagram stays on screen the whole time as a visual anchor. Trace a single query's path through it left-to-right with a pointer or cursor. Don't read boxes.
 - The professor sees you understand the flow.
 - The business consultant sees a story.
+- The colors do the middle work: amber (gate) → blue (gather) → green (refine) → red (enforce) → dark (deliver). If anyone asks about the color scheme, each color is exactly one of the three pillars plus the endpoints.
 
-### Why This Dual-Register Works
+---
 
-1. For the professor: you drop **one** precise technical term per stage (HNSW, Tantivy, RRF k=60, 1.5x title weight). Enough to signal rigor without derailing the consultants.
-2. For the consultants: Deloitte-specific framing ("confidential client memo," "v1 vs v4 deliverable") makes the abstract architecture feel *directly relevant* to their day job. That's what separates a student project from a consulting pitch.
+### Slide 3 — Real Sequence Diagram, Uncovered (~50 sec)
+
+The "magic" box from slide 1 with the cover removed. This is your rigor moment for the professor.
+
+**Narration:**
+> "Here's the magic box, with the cover off. Same five stages I just walked, now with the database calls, the embedding service hop, the rerank API, and the error paths. I won't read this. The point is that every analogy I just used maps to a concrete call. No hand-waving. If anyone wants to dig into where RBAC actually enforces, or where the parallel calls fan out, we can go deeper after the demo."
+
+**What this slide does:**
+- Satisfies the professor: *you actually know the implementation; the hero diagram was a communication choice, not a knowledge gap.*
+- Gives the semi-technical consultant a credibility anchor if their AI familiarity is kicking in.
+- Pays off the "magic" joke from slide 1. Callbacks always land.
+- Earns the right to move past it.
+
+**Do not:**
+- Re-narrate stages. You just spent two minutes on them.
+- Invite questions here. Forward momentum matters; questions after the demo land better.
+- Apologize for the density. It's *supposed* to look dense, that's why slide 1 exists.
+
+---
+
+### Slide 4 — Component Diagram (~25 sec, glance)
+
+**Narration:**
+> "Last technical slide before I show it working. This is the deployment, four Docker services: database, embedding model, backend, and frontend. One Postgres instance handles both vector and keyword search, which is how we keep the operational footprint small. Cohere rerank and the embedding model are the two external dependencies. Everything else runs locally. That's the whole thing."
+
+**What this slide does:**
+- Signals deployment maturity without drifting into DevOps.
+- Quietly answers the "is this a toy or a product" question.
+- Earns the right to say "let me show you."
+
+**Do not:**
+- Explain Docker, pgvector, or ParadeDB from scratch. If slide 2 landed, those terms are already familiar.
+- Stay longer than 30 seconds.
+
+---
+
+### Why This Four-Slide Sequence Works
+
+1. **Slide 1 buys permission to simplify.** By showing the real thing first, you preempt the "is this oversimplified?" suspicion before it forms.
+2. **Slide 2 delivers the argument.** The professor gets one precise technical term per stage (HNSW, Tantivy, RRF k=60, 1.5x title). The consultants get Deloitte-specific framing ("confidential client memo," "v1 vs v4 deliverable") that makes abstract architecture feel directly relevant to their day job.
+3. **Slide 3 cashes the check.** You promised the "magic" was just abstraction; here's the proof. The callback to slide 1 closes the loop without requiring you to re-explain anything.
+4. **Slide 4 is the handshake.** It's not an argument, it's a closing gesture: "this is a real system, now watch it run."
 
 ---
 
@@ -199,14 +269,22 @@ This sentence does three jobs:
 
 ## Appendix: Quick Reference Card (Print for Podium)
 
+**Four slides, four jobs:**
+1. "Magic" slide (~25 sec) → disarming hook, permission to simplify
+2. Hero diagram (~2:30) → the whole argument
+3. Real sequence uncovered (~50 sec) → rigor proof, callback to slide 1
+4. Component diagram (~25 sec) → deployment footprint, glance only
+
 **Three pillars:** Completeness → Precision → Trust
 
-**Five stages, five analogies:**
-1. Input Validation → Lobby security checkpoint
-2. Parallel Hybrid → Three librarians working at once
-3. RRF Merge → Consensus vote across lists
-4. Cohere Rerank → Senior expert reviews the shortlist
-5. RBAC + Version Filter → Compliance officer + archivist
+**Five stages, five analogies** (labels match the hero diagram exactly):
+1. **Lobby Checkpoint** (amber) → security at the lobby, before any AI model sees the query
+2. **Three Specialists** (blue) → Meaning + Exact-Match + Intent, working in parallel
+3. **Consensus Vote** (blue) → RRF merge of the three specialist lists
+4. **Senior Expert Review** (green) → Cohere rerank reads each candidate with the query in mind
+5. **Compliance Filter** (red) → RBAC + version enforcement before hand-off
+
+**Technical details to say aloud but keep off the slide:** RRF k=60, title boost 1.5x, HNSW index on 1024-dim Qwen3 embeddings, ParadeDB/Tantivy for BM25, top-50 into rerank, top-10 out.
 
 **Three demo queries:**
 1. Natural-language query with zero keyword overlap → semantic wins
