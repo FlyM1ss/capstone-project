@@ -1,7 +1,13 @@
 export const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+export interface ApiErrorDetail {
+  error_code?: string;
+  message?: string;
+  [key: string]: unknown;
+}
+
 export interface ApiErrorBody {
-  detail?: string;
+  detail?: string | ApiErrorDetail;
   error_code?: string;
   reason?: string;
   [key: string]: unknown;
@@ -18,12 +24,24 @@ export class ApiError extends Error {
   }
 
   get errorCode(): string | undefined {
+    const d = this.body?.detail;
+    if (d && typeof d === 'object') return d.error_code;
     return this.body?.error_code;
   }
 
   get detail(): string | undefined {
-    return this.body?.detail;
+    const d = this.body?.detail;
+    if (typeof d === 'string') return d;
+    if (d && typeof d === 'object') return d.message;
+    return undefined;
   }
+}
+
+function extractDetailMessage(body: ApiErrorBody | null): string | undefined {
+  const d = body?.detail;
+  if (typeof d === 'string') return d;
+  if (d && typeof d === 'object') return d.message;
+  return undefined;
 }
 
 async function parseErrorBody(res: Response): Promise<ApiErrorBody | null> {
@@ -38,7 +56,7 @@ export async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`);
   if (!res.ok) {
     const body = await parseErrorBody(res);
-    throw new ApiError(res.status, body?.detail ?? `GET ${path} failed: ${res.statusText}`, body);
+    throw new ApiError(res.status, extractDetailMessage(body) ?? `GET ${path} failed: ${res.statusText}`, body);
   }
   return res.json();
 }
@@ -51,7 +69,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   });
   if (!res.ok) {
     const errBody = await parseErrorBody(res);
-    throw new ApiError(res.status, errBody?.detail ?? `POST ${path} failed: ${res.statusText}`, errBody);
+    throw new ApiError(res.status, extractDetailMessage(errBody) ?? `POST ${path} failed: ${res.statusText}`, errBody);
   }
   return res.json();
 }

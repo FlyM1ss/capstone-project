@@ -1,29 +1,54 @@
-import { FormEvent, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SearchFilters } from '@/types';
+import { getQueryBlockReason } from '@/utils/queryValidation';
 import styles from './SearchBar.module.scss';
 
 interface Props {
   initialQuery?: string;
   filters?: SearchFilters;
   onSearch?: (query: string) => void;
+  warning?: string | null;
 }
 
-export default function SearchBar({ initialQuery = '', filters, onSearch }: Props) {
+export default function SearchBar({ initialQuery = '', filters, onSearch, warning }: Props) {
   const [query, setQuery] = useState(initialQuery);
+  const [localWarning, setLocalWarning] = useState<string | null>(null);
+  const [suppressed, setSuppressed] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setSuppressed(false);
+  }, [warning]);
+
+  const displayWarning = suppressed ? null : localWarning ?? warning ?? null;
+
+  function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    setQuery(e.target.value);
+    if (localWarning) setLocalWarning(null);
+    if (!suppressed) setSuppressed(true);
+  }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!query.trim()) return;
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
+    setSuppressed(false);
+    const blockReason = getQueryBlockReason(trimmed);
+    if (blockReason) {
+      setLocalWarning(blockReason);
+      return;
+    }
+    setLocalWarning(null);
 
     if (onSearch) {
-      onSearch(query.trim());
+      onSearch(trimmed);
       return;
     }
 
     const params = new URLSearchParams();
-    params.set('q', query.trim());
+    params.set('q', trimmed);
     if (filters?.types?.length) params.set('types', filters.types.join(','));
     if (filters?.dateRange?.start) params.set('dateStart', filters.dateRange.start);
     if (filters?.dateRange?.end) params.set('dateEnd', filters.dateRange.end);
@@ -39,9 +64,11 @@ export default function SearchBar({ initialQuery = '', filters, onSearch }: Prop
           className={styles.input}
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={handleChange}
           placeholder="Search for decks, documents, policies..."
           aria-label="Search"
+          aria-invalid={displayWarning ? true : undefined}
+          aria-describedby={displayWarning ? 'search-bar-warning' : undefined}
         />
         <button className={styles.button} type="submit" aria-label="Search">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -50,6 +77,16 @@ export default function SearchBar({ initialQuery = '', filters, onSearch }: Prop
           </svg>
         </button>
       </div>
+      {displayWarning && (
+        <div
+          id="search-bar-warning"
+          className={styles.warning}
+          role="status"
+          aria-live="polite"
+        >
+          {displayWarning}
+        </div>
+      )}
     </form>
   );
 }

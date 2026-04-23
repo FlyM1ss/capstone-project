@@ -5,6 +5,11 @@ import { searchDocuments } from '@/api/search';
 import { ApiError } from '@/api/client';
 import { getCachedSearch, setCachedSearch } from '@/api/searchCache';
 import { FILE_TYPES } from '@/constants/filters';
+import {
+  getQueryBlockReason,
+  QUERY_BLOCKED_CODE,
+  QUERY_BLOCKED_MESSAGE,
+} from '@/utils/queryValidation';
 import SearchBar from '@/components/SearchBar/SearchBar';
 import FilterControls from '@/components/FilterControls/FilterControls';
 import ResultItem from '@/components/ResultItem/ResultItem';
@@ -55,6 +60,7 @@ export default function ResultsPage() {
     query ? getCachedSearch(request)?.totalCount ?? 0 : 0
   );
   const [error, setError] = useState<string | null>(null);
+  const [blockedWarning, setBlockedWarning] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [activeSummaryId, setActiveSummaryId] = useState<string | null>(null);
   const summaryCache = useSummaryCache();
@@ -71,7 +77,19 @@ export default function ResultsPage() {
   };
 
   useEffect(() => {
-    if (!query) return;
+    if (!query) {
+      setBlockedWarning(null);
+      return;
+    }
+    const blockReason = getQueryBlockReason(query);
+    if (blockReason) {
+      setBlockedWarning(blockReason);
+      setError(null);
+      setResults([]);
+      setTotalCount(0);
+      return;
+    }
+    setBlockedWarning(null);
     const cached = getCachedSearch(request);
     if (cached) {
       setResults(cached.results);
@@ -87,6 +105,13 @@ export default function ResultsPage() {
         setError(null);
         setCachedSearch(request, res);
       } catch (err) {
+        if (err instanceof ApiError && err.errorCode === QUERY_BLOCKED_CODE) {
+          setBlockedWarning(err.detail ?? QUERY_BLOCKED_MESSAGE);
+          setError(null);
+          setResults([]);
+          setTotalCount(0);
+          return;
+        }
         console.error('Search failed:', err);
         setError(describeSearchError(err));
         setResults([]);
@@ -132,21 +157,27 @@ export default function ResultsPage() {
   return (
     <div className={styles.page}>
       <div className={styles.searchArea}>
-        <SearchBar initialQuery={query} onSearch={(q) => updateParams({ q })} />
-        <div className={styles.filterRow}>
-          <FilterControls
-            filters={filters}
-            onToggleType={toggleType}
-            onSetDateRange={setDateRange}
-            onSetAuthorized={setAuthorized}
-          />
-        </div>
+        <SearchBar
+          initialQuery={query}
+          onSearch={(q) => updateParams({ q })}
+          warning={blockedWarning}
+        />
+        {!blockedWarning && (
+          <div className={styles.filterRow}>
+            <FilterControls
+              filters={filters}
+              onToggleType={toggleType}
+              onSetDateRange={setDateRange}
+              onSetAuthorized={setAuthorized}
+            />
+          </div>
+        )}
       </div>
 
       <div className={activeSummaryId ? styles.splitLayout : undefined}>
         <div className={styles.mainColumn}>
           <div className={styles.resultsArea}>
-            {isPending ? (
+            {blockedWarning ? null : isPending ? (
               <div className={styles.loading}>
                 <div className={styles.spinner} />
                 <span>Searching...</span>
