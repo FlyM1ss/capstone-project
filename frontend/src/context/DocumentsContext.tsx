@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { Document } from '@/types';
 import { getDocuments } from '@/api/documents';
 import { useUser } from '@/context/UserContext';
@@ -14,6 +14,7 @@ function recentsKey(userId: string) { return `fetch-recent-docs-${userId}`; }
 interface DocumentsContextValue {
   pinned: Document[];
   recents: Document[];
+  isPinned: (id: string) => boolean;
   togglePin: (doc: Document) => void;
   recordVisit: (doc: Document) => void;
 }
@@ -50,6 +51,9 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
   const user = useUser();
   const userId = user?.id ?? 'anon';
 
+  // pinnedIds is the single source of truth; pinned holds the Document objects
+  // for rendering (includes docs added from search results that aren't in getDocuments()).
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => new Set());
   const [pinned, setPinned] = useState<Document[]>([]);
   const [recents, setRecents] = useState<Document[]>([]);
 
@@ -57,12 +61,12 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const pk = pinnedKey(userId);
     const rk = recentsKey(userId);
-    const pinnedIds = readPinnedIds(pk);
+    const ids = readPinnedIds(pk);
+    setPinnedIds(ids);
 
     getDocuments()
       .then((docs) => {
-        const withPins = docs.filter((d) => pinnedIds.has(d.id)).map((d) => ({ ...d, isPinned: true }));
-        setPinned(withPins);
+        setPinned(docs.filter((d) => ids.has(d.id)));
       })
       .catch((err) => console.error('DocumentsContext: failed to load documents', err));
 
@@ -71,15 +75,18 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
 
   const togglePin = useCallback((doc: Document) => {
     const pk = pinnedKey(userId);
-    const ids = readPinnedIds(pk);
-    if (ids.has(doc.id)) {
-      ids.delete(doc.id);
-      setPinned((prev) => prev.filter((d) => d.id !== doc.id));
-    } else {
-      ids.add(doc.id);
-      setPinned((prev) => [...prev, { ...doc, isPinned: true }]);
-    }
-    writePinnedIds(pk, ids);
+    setPinnedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(doc.id)) next.delete(doc.id);
+      else next.add(doc.id);
+      writePinnedIds(pk, next);
+      return next;
+    });
+    setPinned((prev) =>
+      prev.some((d) => d.id === doc.id)
+        ? prev.filter((d) => d.id !== doc.id)
+        : [...prev, doc],
+    );
   }, [userId]);
 
   const recordVisit = useCallback((doc: Document) => {
@@ -91,8 +98,15 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
     });
   }, [userId]);
 
+  const isPinned = useCallback((id: string) => pinnedIds.has(id), [pinnedIds]);
+
+  const value = useMemo<DocumentsContextValue>(
+    () => ({ pinned, recents, isPinned, togglePin, recordVisit }),
+    [pinned, recents, isPinned, togglePin, recordVisit],
+  );
+
   return (
-    <DocumentsContext.Provider value={{ pinned, recents, togglePin, recordVisit }}>
+    <DocumentsContext.Provider value={value}>
       {children}
     </DocumentsContext.Provider>
   );

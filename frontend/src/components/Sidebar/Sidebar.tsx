@@ -8,7 +8,8 @@ interface Props {
 }
 
 export default function Sidebar({ isOpen, onToggle }: Props) {
-  const { pinned, recents } = useDocuments();
+  const { pinned, recents, isPinned } = useDocuments();
+  const recentsUnpinned = recents.filter((d) => !isPinned(d.id));
 
   return (
     <aside className={`${styles.sidebar} ${!isOpen ? styles.collapsed : ''}`}>
@@ -52,8 +53,8 @@ export default function Sidebar({ isOpen, onToggle }: Props) {
             <div className={styles.sectionHeader}>
               <span>Recents</span>
             </div>
-            {recents.length > 0 ? (
-              recents.map((doc) => (
+            {recentsUnpinned.length > 0 ? (
+              recentsUnpinned.map((doc) => (
                 <DocumentCard key={doc.id} document={doc} />
               ))
             ) : (

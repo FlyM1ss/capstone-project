@@ -34,7 +34,8 @@ function summarizeLabel(
 }
 
 export default function ResultItem({ document, isSummaryOpen, onToggleSummary }: Props) {
-  const { recordVisit, togglePin } = useDocuments();
+  const { recordVisit, togglePin, isPinned } = useDocuments();
+  const pinned = isPinned(document.id);
   const entry = useDocumentSummary(document.id);
   const status: 'idle' | 'loading' | 'loaded' | 'error' = entry?.status ?? 'idle';
 
@@ -73,11 +74,11 @@ export default function ResultItem({ document, isSummaryOpen, onToggleSummary }:
           <FileTypeBadge fileType={document.fileType} />
           <button
             type="button"
-            className={`${styles.pin} ${document.isPinned ? styles.pinActive : ''}`}
+            className={`${styles.pin} ${pinned ? styles.pinActive : ''}`}
             onClick={handlePin}
-            aria-label={document.isPinned ? 'Unpin document' : 'Pin document'}
+            aria-label={pinned ? 'Unpin document' : 'Pin document'}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill={document.isPinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill={pinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <line x1="12" y1="17" x2="12" y2="22" />
               <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
             </svg>

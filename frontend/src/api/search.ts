@@ -40,7 +40,6 @@ function toDocument(item: BackendSearchResultItem): Document {
     name: item.title,
     fileType: normalizeFileType(item.doc_type),
     editedAt: item.created_date ?? new Date().toISOString(),
-    isPinned: false,
     author: item.author ?? undefined,
     snippet: item.snippet,
   };
