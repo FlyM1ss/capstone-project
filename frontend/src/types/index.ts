@@ -6,7 +6,6 @@ export interface Document {
   fileType: FileType;
   editedAt: string; // ISO date string
   thumbnailUrl?: string;
-  isPinned: boolean;
   author?: string;
   snippet?: string;
 }
