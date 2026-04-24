@@ -233,7 +233,7 @@ Target: 30+ pages (main body ~15-18 pages of prose, remainder from diagrams, tab
 
 **Visual assets:** Financial charts from CBA spreadsheet, comparison tables
 
-**Source material:** CostBenefitAnalysis/ directory (CBA_Narrative_v2.docx, CBA_Deloitte_v2.xlsx)
+**Source material:** coursework/cost-benefit-analysis/ (CBA_Narrative_v2.docx, CBA_Deloitte_v2.xlsx)
 
 ---
 
@@ -333,7 +333,7 @@ Target: 30+ pages (main body ~15-18 pages of prose, remainder from diagrams, tab
 - Assumptions and methodology
 - Sensitivity analysis tables
 
-**Source material:** CostBenefitAnalysis/ directory
+**Source material:** coursework/cost-benefit-analysis/
 
 ### Appendix H: Networking & Deployment
 - Docker Compose configuration
@@ -376,19 +376,20 @@ Target: 30+ pages (main body ~15-18 pages of prose, remainder from diagrams, tab
 
 | Asset | Location | Maps to Section(s) |
 |-------|----------|-------------------|
-| Technical_Architecture_Report.md (73KB) | software-engineering/ | 8, 9, 10, 11, 14, 16 |
+| Technical_Architecture_Report.md (73KB) | coursework/software-engineering/ | 8, 9, 10, 11, 14, 16 |
 | DESIGN_DECISIONS.md (50KB) | root | 12 |
-| Foundational_Knowledge_Report.md (60KB) | Pre-Project-Research/ | Background context for 8, 10 |
-| Deloitte_Knowledge_Management_Research.md (27KB) | Pre-Project-Research/ | 2, 3 |
-| Mini_Strategic_Plan.md (30KB) | mini-strategic-plan/ | 4, 5, 6, 7 |
-| CBA_Narrative_v2.docx + spreadsheets | CostBenefitAnalysis/ | 21 |
+| Foundational_Knowledge_Report.md (60KB) | coursework/research/ | Background context for 8, 10 |
+| Research_KM_Deloitte.md (27KB) | coursework/research/ | 2, 3 |
+| Mini_Strategic_Plan.md (30KB) | coursework/strategic-plan/ | 4, 5, 6, 7 |
+| CBA_Narrative_v2.docx + spreadsheets | coursework/cost-benefit-analysis/ | 21 |
 | demo-queries.md | docs/ | 17 |
-| Midterm presentation (midterm_gamma_ready.md) | ITWS_Capstone/ | Cross-reference all |
-| 8 rendered diagrams (PNG) | software-engineering/diagrams/ | 9, 10, 11, 16, Appendix E |
-| 5 Mermaid source files (.mmd) | software-engineering/diagrams/ | Appendix E |
-| Proposal_Deloitte_V4.pdf | Proposal/ | 2, 3 |
+| Midterm presentation | _missing — recover or omit cross-references_ | Cross-reference all |
+| 8 rendered diagrams (PNG) | coursework/software-engineering/diagrams/ | 9, 10, 11, 16, Appendix E |
+| 5 Mermaid source files (.mmd) | coursework/software-engineering/diagrams/ | Appendix E |
+| Proposal_Deloitte_V4.pdf | coursework/proposals/ | 2, 3 |
 | init.sql | backend/db/ | 13, Appendix C |
-| Past assignments | past-examples/ | Appendices B, F, H |
+| Past assignments | coursework/past-examples/ | Appendices B, F, H |
+| Draft_v1.pdf (prior draft) | coursework/final-report/ | Baseline to revise for final draft |
 
 ---
 
