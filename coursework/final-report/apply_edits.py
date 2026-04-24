@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -367,6 +368,62 @@ def verify_4(docx_path: Path) -> bool:
     return True
 
 
+# =════════════════════════════════════════════════════════════════════
+# Patch 5: financial consistency guardrail (scan + IRR check)
+# =════════════════════════════════════════════════════════════════════
+
+
+def _all_body_text_p5(doc) -> str:
+    parts = [p.text for p in doc.paragraphs]
+    for tbl in doc.tables:
+        for row in tbl.rows:
+            for cell in row.cells:
+                for p in cell.paragraphs:
+                    parts.append(p.text)
+    return "\n".join(parts)
+
+
+def _extract_irr(text_block: str) -> str | None:
+    """Find the first IRR percentage in a chunk of text."""
+    m = re.search(r"IRR[^0-9]{0,30}([0-9][0-9,\.]*)\s*%", text_block, re.IGNORECASE)
+    return m.group(1) if m else None
+
+
+def patch_5_financial_consistency(docx_path: Path) -> None:
+    doc = Document(docx_path)
+    full_text = _all_body_text_p5(doc)
+
+    # 1. Stale-figure scan
+    for stale in L.STALE_FIGURES:
+        if stale in full_text:
+            raise RuntimeError(
+                f"Patch 5 halt: stale figure {stale!r} found in document. "
+                "Manual review required; canonical figures are in locators.py."
+            )
+
+    # 2. IRR consistency check between §1 (Executive Summary) and §9.3 (IRR subsection).
+    paras = [p.text for p in doc.paragraphs]
+    sec1_block = " ".join(paras[L.PARA_SECTION_1_HEADING:L.PARA_SECTION_1_HEADING + 20])
+    sec9_block = " ".join(paras[L.PARA_HEADING_IRR:L.PARA_HEADING_IRR + 8])
+
+    irr_1 = _extract_irr(sec1_block)
+    irr_9 = _extract_irr(sec9_block)
+
+    if irr_1 and irr_9 and irr_1.replace(",", "") != irr_9.replace(",", ""):
+        raise RuntimeError(
+            f"Patch 5 halt: IRR disagreement, section 1 reports {irr_1}% while "
+            f"section 9.3 reports {irr_9}%. Reconcile before submitting."
+        )
+
+    # Patch 5 is a no-op on clean input; we do not call doc.save().
+
+
+def verify_5(docx_path: Path) -> bool:
+    # verify_5 simply re-runs the patch and trusts it to raise on failure.
+    patch_5_financial_consistency(docx_path)
+    return True
+
+
 def _run_patches(source: Path, target: Path, up_to: int | None, only: int | None) -> int:
     shutil.copy2(source, target)
 
@@ -381,7 +438,7 @@ def _run_patches(source: Path, target: Path, up_to: int | None, only: int | None
         (2, lambda: patch_2_simplify_jargon(target), verify_2),
         (3, lambda: patch_3_normalize_tables(target), verify_3),
         (4, lambda: patch_4_copyedit_pass(target), verify_4),
-        # 5 lands in a later task
+        (5, lambda: patch_5_financial_consistency(target), verify_5),
     ]
 
     for n, run_fn, verify_fn in patches:
