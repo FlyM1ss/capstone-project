@@ -130,6 +130,93 @@ def verify_1(docx_path: Path) -> bool:
     return True
 
 
+# ═════════════════════════════════════════════════════════════════════
+# Patch 2: simplify jargon for executive audience (§8.2 – §8.7)
+# ═════════════════════════════════════════════════════════════════════
+
+# Seven rewrites, each keyed by paragraph index. Technical anchor terms
+# (PostgreSQL, RRF, HNSW, embeddings) are preserved; business-impact
+# clauses are added so an executive reader can follow.
+JARGON_REWRITES: dict[int, str] = {
+    148: (
+        "The Processing Layer contains the system's core business logic. "
+        "The search service orchestrates the hybrid retrieval pipeline, "
+        "converting each query into a numerical representation, running three "
+        "retrieval signals against the database in parallel, and returning a "
+        "ranked result list within milliseconds. Reranking and access-control "
+        "filtering run as final steps before results reach the user."
+    ),
+    149: (
+        "The Data Layer centers on a single database instance running the "
+        "ParadeDB image, which bundles PostgreSQL with two extensions the "
+        "system relies on: pgvector for semantic (meaning-based) search and "
+        "pg_search for keyword search. Consolidating both capabilities into "
+        "one database removes the operational overhead of running a separate "
+        "vector store, and keeps every search signal within the same "
+        "transactional boundary."
+    ),
+    150: (
+        "External services include the Qwen3-Embedding-0.6B model (deployed "
+        "locally or via an external GPU host) and the Cohere Rerank v3.5 API. "
+        "The embedding model converts text to a numerical representation the "
+        "database can search; the reranker reorders the top candidates by "
+        "deeper relevance before they are shown to the user."
+    ),
+    156: (
+        "The system performs three retrieval signals in parallel against a "
+        "single database call. A semantic search finds chunks whose meaning "
+        "matches the query; a keyword search finds chunks whose words match; "
+        "and a title search boosts documents whose title alone closely "
+        "matches the query. Running these in parallel keeps total latency "
+        "bounded by the slowest single signal, not their sum."
+    ),
+    157: (
+        "The three ranked lists are merged using Reciprocal Rank Fusion (RRF), "
+        "a rank aggregation method that combines the strengths of each signal "
+        "without requiring hand-tuned weights. RRF rewards documents that "
+        "rank highly across multiple signals and penalizes documents that "
+        "appear only in one, which makes the final ranking resilient to "
+        "any single signal's weaknesses."
+    ),
+    169: (
+        "The document_chunks table stores the searchable representation of "
+        "each document. Every row holds a segment of text (roughly 512 "
+        "tokens), its numerical embedding, its parent document ID, and the "
+        "access-control level it inherits. A specialized index on the "
+        "embedding column (HNSW) enables meaning-based lookups in "
+        "milliseconds, even as the table grows."
+    ),
+    183: (
+        "The fourth decision was the merge strategy for combining the three "
+        "retrieval signals. Rather than a linear combination, which would "
+        "require hand-tuned weights and would quietly drift as the corpus "
+        "changes, the system uses Reciprocal Rank Fusion. RRF is "
+        "parameter-free relative to query content, scales naturally from "
+        "dozens to millions of documents, and degrades gracefully if any "
+        "one signal underperforms."
+    ),
+}
+
+
+def patch_2_simplify_jargon(docx_path: Path) -> None:
+    doc = Document(docx_path)
+    for idx, new_text in JARGON_REWRITES.items():
+        para = doc.paragraphs[idx]
+        para.text = new_text
+    doc.save(docx_path)
+
+
+def verify_2(docx_path: Path) -> bool:
+    doc = Document(docx_path)
+    for idx, new_text in JARGON_REWRITES.items():
+        actual = doc.paragraphs[idx].text
+        if actual.strip() != new_text.strip():
+            raise AssertionError(
+                f"Patch 2 failed at paragraph {idx}: expected rewrite not present."
+            )
+    return True
+
+
 def _run_patches(source: Path, target: Path, up_to: int | None, only: int | None) -> int:
     shutil.copy2(source, target)
 
@@ -141,7 +228,8 @@ def _run_patches(source: Path, target: Path, up_to: int | None, only: int | None
 
     patches = [
         (1, lambda: patch_1_8_10_screenshots(target, screenshots), verify_1),
-        # 2..5 land in later tasks
+        (2, lambda: patch_2_simplify_jargon(target), verify_2),
+        # 3..5 land in later tasks
     ]
 
     for n, run_fn, verify_fn in patches:
