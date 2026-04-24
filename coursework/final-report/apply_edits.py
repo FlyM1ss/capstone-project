@@ -20,6 +20,7 @@ from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 
 import locators as L
 
@@ -217,6 +218,78 @@ def verify_2(docx_path: Path) -> bool:
     return True
 
 
+# ═════════════════════════════════════════════════════════════════════
+# Patch 3: normalize table formatting (data tables only, not callouts)
+# ═════════════════════════════════════════════════════════════════════
+
+def _set_cell_fill(cell, fill_hex: str) -> None:
+    tcPr = cell._element.get_or_add_tcPr()
+    for old in tcPr.findall(qn("w:shd")):
+        tcPr.remove(old)
+    shd = OxmlElement("w:shd")
+    shd.set(qn("w:val"), "clear")
+    shd.set(qn("w:color"), "auto")
+    shd.set(qn("w:fill"), fill_hex)
+    tcPr.append(shd)
+
+
+def _clear_cell_fill(cell) -> None:
+    tcPr = cell._element.get_or_add_tcPr()
+    for old in tcPr.findall(qn("w:shd")):
+        tcPr.remove(old)
+
+
+def _style_header_cell(cell) -> None:
+    _set_cell_fill(cell, L.HEADER_FILL_HEX)
+    for p in cell.paragraphs:
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for run in p.runs:
+            run.bold = True
+            run.font.size = Pt(L.FONT_SIZE_TABLE_PT)
+            run.font.name = L.FONT_NAME
+            run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+
+
+def _style_body_cell(cell, shaded: bool) -> None:
+    if shaded:
+        _set_cell_fill(cell, L.ROW_ALT_FILL_HEX)
+    else:
+        _clear_cell_fill(cell)
+    for p in cell.paragraphs:
+        for run in p.runs:
+            run.font.size = Pt(L.FONT_SIZE_TABLE_PT)
+            run.font.name = L.FONT_NAME
+
+
+def patch_3_normalize_tables(docx_path: Path) -> None:
+    doc = Document(docx_path)
+    for t_idx in L.TABLES_DATA:
+        tbl = doc.tables[t_idx]
+        # Header row
+        for cell in tbl.rows[0].cells:
+            _style_header_cell(cell)
+        # Body rows with alternating shading
+        for row_idx in range(1, len(tbl.rows)):
+            shaded = (row_idx % 2 == 1)
+            for cell in tbl.rows[row_idx].cells:
+                _style_body_cell(cell, shaded)
+    doc.save(docx_path)
+
+
+def verify_3(docx_path: Path) -> bool:
+    doc = Document(docx_path)
+    for t_idx in L.TABLES_DATA:
+        tbl = doc.tables[t_idx]
+        for cell in tbl.rows[0].cells:
+            tcPr = cell._element.find(qn("w:tcPr"))
+            shd = tcPr.find(qn("w:shd")) if tcPr is not None else None
+            if shd is None or shd.get(qn("w:fill")) != L.HEADER_FILL_HEX:
+                raise AssertionError(
+                    f"Patch 3 failed: table {t_idx} header missing navy fill"
+                )
+    return True
+
+
 def _run_patches(source: Path, target: Path, up_to: int | None, only: int | None) -> int:
     shutil.copy2(source, target)
 
@@ -229,7 +302,8 @@ def _run_patches(source: Path, target: Path, up_to: int | None, only: int | None
     patches = [
         (1, lambda: patch_1_8_10_screenshots(target, screenshots), verify_1),
         (2, lambda: patch_2_simplify_jargon(target), verify_2),
-        # 3..5 land in later tasks
+        (3, lambda: patch_3_normalize_tables(target), verify_3),
+        # 4..5 land in later tasks
     ]
 
     for n, run_fn, verify_fn in patches:
