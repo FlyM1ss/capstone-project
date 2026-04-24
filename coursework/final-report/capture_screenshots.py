@@ -23,10 +23,24 @@ FRONTEND = "http://localhost:3000"
 BACKEND_HEALTH = "http://localhost:8000/api/health"
 VIEWPORT = {"width": 1920, "height": 1080}
 
+# The app uses React Router (BrowserRouter) inside a Next.js catch-all page
+# with SSR disabled (dynamic import, ssr: false).  All routes are client-side.
+# Actual React Router routes:
+#   /         -> SearchPage  (landing)
+#   /results  -> ResultsPage (search results, reads ?q= from URL)
+#   /account  -> AccountPage (user / admin profile view)
 TARGETS = [
-    ("/",                            "landing.png"),
-    ("/search?q=remote+work+policy", "search-results.png"),
-    ("/admin/upload",                "admin-upload.png"),
+    # (path, wait_selector, filename)
+    # wait_selector: CSS selector that must appear before screenshot is taken
+    ("/",
+     "[class*='searchSection'], [class*='center']",
+     "landing.png"),
+    ("/results?q=remote+work+policy",
+     "[class*='resultsArea'], [class*='page']",
+     "search-results.png"),
+    ("/account",
+     "[class*='card'], [class*='page']",
+     "admin-upload.png"),
 ]
 
 
@@ -42,9 +56,14 @@ def wait_for_health(url: str, timeout_s: int = 60) -> None:
     raise RuntimeError(f"Backend never healthy at {url} within {timeout_s}s")
 
 
-def capture(page, route: str, out: Path) -> None:
+def capture(page, route: str, wait_selector: str, out: Path) -> None:
     page.goto(FRONTEND + route, wait_until="networkidle", timeout=30_000)
-    page.wait_for_timeout(1500)
+    # Wait for React to hydrate and the target element to appear
+    try:
+        page.wait_for_selector(wait_selector, timeout=10_000)
+    except Exception:
+        pass  # proceed even if selector times out; screenshot what we have
+    page.wait_for_timeout(2000)  # extra settle time for animations / data fetches
     page.screenshot(path=str(out), full_page=False)
     print(f"  wrote {out.name} ({out.stat().st_size} bytes)")
 
@@ -58,8 +77,8 @@ def main() -> int:
         browser = pw.chromium.launch(headless=True)
         context = browser.new_context(viewport=VIEWPORT, device_scale_factor=1)
         page = context.new_page()
-        for route, fname in TARGETS:
-            capture(page, route, OUT_DIR / fname)
+        for route, wait_selector, fname in TARGETS:
+            capture(page, route, wait_selector, OUT_DIR / fname)
         browser.close()
 
     print(f"\nAll 3 screenshots written to {OUT_DIR}")
