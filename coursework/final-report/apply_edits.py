@@ -290,6 +290,83 @@ def verify_3(docx_path: Path) -> bool:
     return True
 
 
+# =================================================================
+# Patch 4: copyedit pass -- em-dashes, redundancies, transitions
+# =================================================================
+
+# Order matters: longer patterns first.
+COPYEDIT_REPLACEMENTS: list[tuple[str, str]] = [
+    # Em-dash -> comma. The replacement is a safe sentence-internal pause
+    # that reads cleanly in most contexts. Cases where the em-dash bounded
+    # a parenthetical will still read correctly as a comma-delimited clause.
+    ("—", ", "),
+    # Redundancy removal
+    (" in order to ", " to "),
+    (" In order to ", " To "),
+    # Tense consistency (recurring slips in draft)
+    (" will be able to ", " can "),
+    # Double-space typos
+    ("  ", " "),
+]
+
+
+def _replace_in_runs(para, old: str, new: str) -> None:
+    """Replace old->new while preserving per-run formatting when possible."""
+    if old not in para.text:
+        return
+    if len(para.runs) == 1:
+        para.runs[0].text = para.runs[0].text.replace(old, new)
+        return
+    # Multi-run: join, replace, rewrite into first run, blank others.
+    # Loses intra-paragraph formatting -- acceptable for body prose.
+    joined = "".join(r.text for r in para.runs).replace(old, new)
+    para.runs[0].text = joined
+    for r in para.runs[1:]:
+        r.text = ""
+
+
+def patch_4_copyedit_pass(docx_path: Path) -> None:
+    doc = Document(docx_path)
+
+    def walk_paragraphs():
+        for p in doc.paragraphs:
+            yield p
+        for tbl in doc.tables:
+            for row in tbl.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        yield p
+
+    for para in walk_paragraphs():
+        if not para.text:
+            continue
+        for old, new in COPYEDIT_REPLACEMENTS:
+            _replace_in_runs(para, old, new)
+
+    doc.save(docx_path)
+
+
+def verify_4(docx_path: Path) -> bool:
+    doc = Document(docx_path)
+
+    def _iter():
+        for p in doc.paragraphs:
+            yield p.text
+        for tbl in doc.tables:
+            for row in tbl.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        yield p.text
+
+    full = "\n".join(_iter())
+    if "—" in full:
+        n = full.count("—")
+        raise AssertionError(f"Patch 4 failed: {n} em-dash(es) remain")
+    if "in order to" in full.lower():
+        raise AssertionError("Patch 4 failed: 'in order to' still present")
+    return True
+
+
 def _run_patches(source: Path, target: Path, up_to: int | None, only: int | None) -> int:
     shutil.copy2(source, target)
 
@@ -303,7 +380,8 @@ def _run_patches(source: Path, target: Path, up_to: int | None, only: int | None
         (1, lambda: patch_1_8_10_screenshots(target, screenshots), verify_1),
         (2, lambda: patch_2_simplify_jargon(target), verify_2),
         (3, lambda: patch_3_normalize_tables(target), verify_3),
-        # 4..5 land in later tasks
+        (4, lambda: patch_4_copyedit_pass(target), verify_4),
+        # 5 lands in a later task
     ]
 
     for n, run_fn, verify_fn in patches:
