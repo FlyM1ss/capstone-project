@@ -802,6 +802,80 @@ def verify_16(docx_path: Path) -> bool:
     return True
 
 
+# ═════════════════════════════════════════════════════════════════════
+# Patch 17: anchor problem-framing in §5, condense the duplicates
+# ═════════════════════════════════════════════════════════════════════
+# §5 Problem Statement is the natural home for "scattered knowledge /
+# 2.8h-per-week / 470K employees" framing. The same material currently
+# repeats in §1 (kept, executive teaser), §2 (para 28), §3 (para 36,
+# rewritten by Patch 16), §7.4 (para 132), and §9.2 (para 226).
+# Patch 17 trims the four downstream duplicates so each cites §5 instead
+# of restating the premise. Net savings ~80w (~0.3pp) and improves the
+# §5 -> §7 -> §9 chain (problem -> methodology -> results) by removing
+# redundant restatement at each link.
+#
+# Must run AFTER Patch 16 (both touch para 36) and BEFORE Patch 10.
+
+ANTI_REDUNDANCY_REPLACEMENTS: dict[int, str] = {
+    28: (
+        "Deloitte engaged a team of six students from Rensselaer "
+        "Polytechnic Institute's ITWS 4100 Information Technology "
+        "Capstone course to design, develop, and deliver a unified "
+        "search engine that leverages Natural Language Processing to "
+        "help employees find relevant files quickly and intuitively. "
+        "Section 5 details the underlying problem this engagement "
+        "addresses."
+    ),
+    36: (
+        "The enterprise search market itself is valued at $7.47 billion "
+        "in 2026 and projected to reach $11.66 billion by 2031 at 9.31% "
+        "CAGR (Mordor Intelligence, 2026), reflecting industry "
+        "recognition that intelligent search is now foundational "
+        "infrastructure. Section 5 quantifies the productivity-loss "
+        "drivers that make this market relevant at Deloitte's scale."
+    ),
+    132: (
+        "The benefit model centered on productivity recovery. Using the "
+        "2.8 hours/week productivity loss documented in Section 5, the "
+        "analysis assumed a conservative recovery of 1.5 hours per week "
+        "per adopter within a cohort where 70% of the 50-person pilot "
+        "actively uses the system. Benefits were quantified using "
+        "Deloitte's average professional services billing rates."
+    ),
+    226: (
+        "The dominant benefit driver is search time recovered "
+        "($448,000/year), reflecting the direct translation of the "
+        "Section 5 productivity-loss baseline into net revenue margin "
+        "at $177.78/hr (billable rate minus fully loaded consultant "
+        "cost). The second-largest driver is reduction in senior "
+        "colleague interruptions ($238,933/year), valued at $248.89/hr "
+        "net margin, which captures the downstream value of junior "
+        "consultants no longer needing to escalate document location "
+        "requests."
+    ),
+}
+
+
+def patch_17_anti_redundancy(docx_path: Path) -> None:
+    doc = Document(docx_path)
+    for idx, new_text in ANTI_REDUNDANCY_REPLACEMENTS.items():
+        doc.paragraphs[idx].text = new_text
+    doc.save(docx_path)
+
+
+def verify_17(docx_path: Path) -> bool:
+    doc = Document(docx_path)
+    for idx, new_text in ANTI_REDUNDANCY_REPLACEMENTS.items():
+        actual = doc.paragraphs[idx].text
+        if actual.strip() != new_text.strip():
+            raise AssertionError(f"Patch 17 failed at paragraph {idx}: not rewritten")
+    # The §5 forward-references must be present in all 4 trimmed paragraphs
+    for idx in ANTI_REDUNDANCY_REPLACEMENTS:
+        if "Section 5" not in doc.paragraphs[idx].text:
+            raise AssertionError(f"Patch 17 failed: §5 forward-ref missing at {idx}")
+    return True
+
+
 # Patch 10 deletes 6 paragraphs in §7.2, shifting all subsequent paragraph
 # indices by -6. Every patch using ORIGINAL paragraph indices must run
 # BEFORE Patch 10. Patch 10 stays last.
@@ -816,6 +890,7 @@ PATCHES = [
     (14, patch_14_team_roles, verify_14),
     (15, patch_15_user_research, verify_15),
     (16, patch_16_client_org, verify_16),
+    (17, patch_17_anti_redundancy, verify_17),
     (10, patch_10_wireframes, verify_10),
 ]
 
