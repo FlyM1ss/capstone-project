@@ -541,9 +541,270 @@ def verify_12(docx_path: Path) -> bool:
     return True
 
 
+# ═════════════════════════════════════════════════════════════════════
+# Patch 13: §1 Executive Summary trim (510w -> ~314w, ~1pp savings)
+# ═════════════════════════════════════════════════════════════════════
+# Currently spans ~1.8 pages despite the section's "1-1.5pp" budget. The
+# two biggest cuts: drop the explicit list of all six member names from
+# para 17 (already in §4 + table), and drop the PM tooling list from
+# para 20 (already in §10). Other paragraphs get density compression.
+
+EXEC_SUMMARY_REPLACEMENTS: dict[int, str] = {
+    16: (
+        "Deloitte employs over 470,000 professionals across more than 150 "
+        "countries who depend on a vast repository of internal documents, "
+        "policies, and deliverables. Searching across the firm's fragmented "
+        "internal platforms is often slow and frustrating, particularly when "
+        "employees cannot recall the exact title, author, or location of "
+        "what they need."
+    ),
+    17: (
+        "To address this, an RPI capstone team of six Information "
+        "Technology and Computer Science students designed and built a "
+        "working prototype of an AI-powered search engine. Users issue "
+        "natural-language queries; the system interprets intent and "
+        "returns ranked results via a hybrid retrieval pipeline that "
+        "combines semantic search, keyword matching (BM25), and neural "
+        "reranking."
+    ),
+    18: (
+        "The project delivers all four artifacts in Deloitte's brief: "
+        "requirements grounded in user research, market and security "
+        "analysis, technical architecture documentation, and a functioning "
+        "web application. The technology stack (Next.js, FastAPI, "
+        "PostgreSQL with pgvector and ParadeDB, Qwen3-Embedding-0.6B) is "
+        "entirely open-source, eliminating the per-user licensing fees "
+        "that commercial alternatives would impose at Deloitte's scale."
+    ),
+    19: (
+        "A three-year cost-benefit analysis at a 10% discount rate, "
+        "assuming 70% adoption among a 50-person pilot and 1.5 hours per "
+        "week recovered per adopter, yielded a net present value of "
+        "+$2,168,378, an internal rate of return of approximately 3,700%, "
+        "and payback within the first month of operation. Total risk "
+        "exposure was $16,600 in expected monetary value; every scenario "
+        "tested (worst, base, best) produced a positive NPV."
+    ),
+    20: (
+        "The team executed on a nine-week Agile schedule with weekly "
+        "client feedback, demonstrating the prototype against a curated "
+        "corpus of 80+ sample documents in PDF, DOCX, and PPTX formats."
+    ),
+    21: (
+        "The result is a proof-of-concept showing what becomes possible "
+        "when search understands both user intent and the structure of an "
+        "organization's internal resources. The architecture has a clear "
+        "path to production: enterprise authentication, multilingual "
+        "support, expanded corpus ingestion, and evolution from document "
+        "retrieval to retrieval-augmented answer generation."
+    ),
+}
+
+
+def patch_13_exec_summary(docx_path: Path) -> None:
+    doc = Document(docx_path)
+    for idx, new_text in EXEC_SUMMARY_REPLACEMENTS.items():
+        doc.paragraphs[idx].text = new_text
+    doc.save(docx_path)
+
+
+def verify_13(docx_path: Path) -> bool:
+    doc = Document(docx_path)
+    for idx, new_text in EXEC_SUMMARY_REPLACEMENTS.items():
+        actual = doc.paragraphs[idx].text
+        if actual.strip() != new_text.strip():
+            raise AssertionError(f"Patch 13 failed at paragraph {idx}: not rewritten")
+    # Total §1 word count check
+    total = sum(len(doc.paragraphs[i].text.split()) for i in range(16, 22))
+    if total > 350:
+        raise AssertionError(f"Patch 13 failed: §1 still {total}w (target <350)")
+    return True
+
+
+# ═════════════════════════════════════════════════════════════════════
+# Patch 14: §10.1 team-roles paragraph (175w -> ~75w)
+# ═════════════════════════════════════════════════════════════════════
+# Original paragraph 271 (in pre-Patch-10 indexing) duplicates the §4
+# bios after they were trimmed. Strip the role descriptions and keep
+# only the Domain A-E architectural mapping, which IS §10-specific.
+# Forwards readers to §4 for member background.
+
+PARA_10_1_TEAM_ROLES = 271
+
+REPLACEMENT_10_1_TEAM_ROLES = (
+    "Domains were assigned by system architecture rather than by generic "
+    "job title. Felix Tian led ingestion (Domain A), retrieval (Domain "
+    "B), and the API layer (Domain D). Matthew Voynovich led security "
+    "(Domain C), including adversarial testing and the input-validation "
+    "pipeline. Sophia Turnbow led user research and frontend design "
+    "(Domain E). Raven Levitt supported frontend implementation and "
+    "served as project manager. Jesse Gabriel contributed to developer "
+    "documentation and best-practice research. Andrew Jung led market "
+    "and competitive analysis. Member backgrounds and credentials are "
+    "in Section 4."
+)
+
+
+def patch_14_team_roles(docx_path: Path) -> None:
+    doc = Document(docx_path)
+    para = doc.paragraphs[PARA_10_1_TEAM_ROLES]
+    para.text = REPLACEMENT_10_1_TEAM_ROLES
+    doc.save(docx_path)
+
+
+def verify_14(docx_path: Path) -> bool:
+    doc = Document(docx_path)
+    text = doc.paragraphs[PARA_10_1_TEAM_ROLES].text
+    if len(text.split()) > 100:
+        raise AssertionError(f"Patch 14 failed: §10.1 team-roles still {len(text.split())}w")
+    if "Domain A" not in text or "Section 4" not in text:
+        raise AssertionError("Patch 14 failed: Domain mapping or §4 forward-ref missing")
+    return True
+
+
+# ═════════════════════════════════════════════════════════════════════
+# Patch 15: §7.2 prose tightening (~149w savings, ~0.5pp)
+# ═════════════════════════════════════════════════════════════════════
+# §7.2 is still the heaviest §7 subsection (4.68pp) even after Patch 10
+# dropped 3 wireframes. Tighten the surrounding prose paragraphs without
+# losing the iteration narrative. Skip paragraphs 107 and 114, which
+# Patch 10 already rewrites, and 108-113 which Patch 10 deletes.
+
+USER_RESEARCH_REPLACEMENTS: dict[int, str] = {
+    97: (
+        "User research was conducted in parallel with system design and "
+        "prototyping to ground interface decisions in real user needs and "
+        "workflows. Because direct stakeholder interviews and large-scale "
+        "usability testing were not feasible, the team adopted a hybrid "
+        "approach: iterative client meetings combined with a structured "
+        "user survey distributed to client representatives, capturing "
+        "both qualitative and experience-based insights from people "
+        "familiar with Deloitte's tools."
+    ),
+    98: (
+        "The research spanned consulting, tax, and audit service lines "
+        "to reflect the diversity of search behaviors within the "
+        "organization. The survey targeted four objectives: how users "
+        "currently interact with internal search systems, common pain "
+        "points, the document types most frequently searched for, and "
+        "presentation preferences for results and metadata."
+    ),
+    99: (
+        "Responses revealed consistent themes. Users described existing "
+        "search systems as overwhelming, with large volumes of irrelevant "
+        "or outdated results and difficulty identifying the correct "
+        "document even when present. Recency emerged as critical to user "
+        "trust, with outdated documents reducing confidence. Users also "
+        "flagged inefficient workflows (multiple browser tabs) and "
+        "challenges with legacy naming conventions left over from "
+        "organizational restructuring."
+    ),
+    100: (
+        "To address these findings, the team began with low-fidelity "
+        "wireframes in two directions. The first followed a traditional "
+        "dashboard-style layout with multiple panels for saved items, "
+        "recent documents, and news (Figure 7.2.1: Homepage Version A), "
+        "based on the example layout the client shared. The second "
+        "adopted a minimalist, search-focused interface centered on a "
+        "single primary interaction (Figure 7.2.2: Homepage Version B)."
+    ),
+    119: (
+        "User research also supported the development of personas "
+        "capturing variations in experience level, departmental needs, "
+        "and search behaviors. These personas validated design decisions "
+        "and ensured the system addressed a broad range of user "
+        "requirements."
+    ),
+    120: (
+        "Overall, the user research process, while constrained in scope, "
+        "provided actionable insights that directly shaped the system. "
+        "Iterative integration of feedback throughout the design process "
+        "produced a final interface that aligns user needs with system "
+        "capabilities."
+    ),
+}
+
+
+def patch_15_user_research(docx_path: Path) -> None:
+    doc = Document(docx_path)
+    for idx, new_text in USER_RESEARCH_REPLACEMENTS.items():
+        doc.paragraphs[idx].text = new_text
+    doc.save(docx_path)
+
+
+def verify_15(docx_path: Path) -> bool:
+    doc = Document(docx_path)
+    for idx, new_text in USER_RESEARCH_REPLACEMENTS.items():
+        actual = doc.paragraphs[idx].text
+        if actual.strip() != new_text.strip():
+            raise AssertionError(f"Patch 15 failed at paragraph {idx}: not rewritten")
+    return True
+
+
+# ═════════════════════════════════════════════════════════════════════
+# Patch 16: §3 Client Organization tightening (~104w savings, ~0.4pp)
+# ═════════════════════════════════════════════════════════════════════
+# §3 is at 1.24pp vs a "0.5-1pp" intro budget. Light density compression
+# of paragraphs 33-36, preserving every fact and citation.
+
+CLIENT_ORG_REPLACEMENTS: dict[int, str] = {
+    33: (
+        "Deloitte Touche Tohmatsu Limited (Deloitte) is the largest of "
+        "the Big Four professional services firms by both revenue and "
+        "headcount, reporting $70.5 billion in aggregate global revenue "
+        "for fiscal 2025 and employing over 470,000 people across 700+ "
+        "offices in more than 150 countries (Deloitte Global, 2025)."
+    ),
+    34: (
+        "Deloitte operates across four primary service lines: Audit and "
+        "Assurance, Consulting, Financial Advisory, and Tax and Legal. "
+        "The workforce is knowledge-intensive: consultants, auditors, "
+        "tax advisors, and specialists depend on internal documents, "
+        "policies, methodologies, past deliverables, and training "
+        "materials, making the quality of information retrieval a direct "
+        "driver of workforce productivity and billable utilization."
+    ),
+    35: (
+        "Deloitte has invested heavily in AI and digital transformation. "
+        "It launched PairD, an internal generative AI assistant, and "
+        "committed 36% of its digital budget to AI initiatives. The "
+        "Deloitte AI Institute and Omnia AI platform represent sustained "
+        "organizational investment, providing the cultural readiness and "
+        "technical infrastructure that made this search engine project "
+        "a natural fit."
+    ),
+    36: (
+        "At Deloitte's scale, modest efficiency gains compound. With "
+        "470,000 employees, even a fraction of the estimated 2.8 hours "
+        "per week lost to information search produces substantial "
+        "cumulative gains. The enterprise search market itself is "
+        "valued at $7.47 billion in 2026 and projected to reach "
+        "$11.66 billion by 2031 at 9.31% CAGR (Mordor Intelligence, "
+        "2026), reflecting industry recognition that intelligent search "
+        "is now foundational infrastructure."
+    ),
+}
+
+
+def patch_16_client_org(docx_path: Path) -> None:
+    doc = Document(docx_path)
+    for idx, new_text in CLIENT_ORG_REPLACEMENTS.items():
+        doc.paragraphs[idx].text = new_text
+    doc.save(docx_path)
+
+
+def verify_16(docx_path: Path) -> bool:
+    doc = Document(docx_path)
+    for idx, new_text in CLIENT_ORG_REPLACEMENTS.items():
+        actual = doc.paragraphs[idx].text
+        if actual.strip() != new_text.strip():
+            raise AssertionError(f"Patch 16 failed at paragraph {idx}: not rewritten")
+    return True
+
+
 # Patch 10 deletes 6 paragraphs in §7.2, shifting all subsequent paragraph
-# indices by -6. To keep Patches 6-9, 11, 12 addressable by their original
-# indices, Patch 10 MUST run last.
+# indices by -6. Every patch using ORIGINAL paragraph indices must run
+# BEFORE Patch 10. Patch 10 stays last.
 PATCHES = [
     (6, patch_6_seven_four_financial, verify_6),
     (7, patch_7_cost_table_empties, verify_7),
@@ -551,6 +812,10 @@ PATCHES = [
     (9, patch_9_bios, verify_9),
     (11, patch_11_timeline, verify_11),
     (12, patch_12_tightening, verify_12),
+    (13, patch_13_exec_summary, verify_13),
+    (14, patch_14_team_roles, verify_14),
+    (15, patch_15_user_research, verify_15),
+    (16, patch_16_client_org, verify_16),
     (10, patch_10_wireframes, verify_10),
 ]
 
