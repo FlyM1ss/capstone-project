@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { UserProvider } from '@/context/UserContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { DocumentsProvider } from '@/context/DocumentsContext';
+import { SummaryCacheProvider } from '@/context/SummaryCacheContext';
 import Layout from '@/components/Layout/Layout';
 import SearchPage from '@/pages-views/SearchPage/SearchPage';
 import ResultsPage from '@/pages-views/ResultsPage/ResultsPage';
@@ -14,14 +15,16 @@ export default function App() {
       <ThemeProvider>
         <UserProvider>
           <DocumentsProvider>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<SearchPage />} />
-                <Route path="/results" element={<ResultsPage />} />
-                <Route path="/account" element={<AccountPage />} />
-                <Route path="/document/:id" element={<DocumentPage />} />
-              </Routes>
-            </Layout>
+            <SummaryCacheProvider>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<SearchPage />} />
+                  <Route path="/results" element={<ResultsPage />} />
+                  <Route path="/account" element={<AccountPage />} />
+                  <Route path="/document/:id" element={<DocumentPage />} />
+                </Routes>
+              </Layout>
+            </SummaryCacheProvider>
           </DocumentsProvider>
         </UserProvider>
       </ThemeProvider>
