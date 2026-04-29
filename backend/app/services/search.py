@@ -17,7 +17,8 @@ async def hybrid_search(
     filters: dict | None = None,
     user_role: str = "analyst",
     top_k: int = 10,
-    show_latest_only: bool = True,
+    show_latest_only: bool = False,
+    show_oldest_only: bool = False,
 ) -> tuple[list[SearchResultItem], int]:
     """Execute hybrid search: semantic + BM25 + title similarity, RRF merge, rerank."""
     start = time.time()
@@ -172,6 +173,8 @@ async def hybrid_search(
     # 11. Version filtering
     if show_latest_only:
         results = _filter_latest_versions(results)
+    elif show_oldest_only:
+        results = _filter_oldest_versions(results)
 
     latency_ms = int((time.time() - start) * 1000)
     return results, latency_ms
@@ -207,6 +210,23 @@ def _filter_latest_versions(results: list[SearchResultItem]) -> list[SearchResul
         if r.document_group is None
         or r.version is None
         or r.version == latest_versions.get(r.document_group)
+    ]
+
+
+def _filter_oldest_versions(results: list[SearchResultItem]) -> list[SearchResultItem]:
+    """Keep only the oldest version per document_group."""
+    oldest_versions: dict[str, int] = {}
+    for r in results:
+        if r.document_group is None or r.version is None:
+            continue
+        if r.document_group not in oldest_versions or r.version < oldest_versions[r.document_group]:
+            oldest_versions[r.document_group] = r.version
+
+    return [
+        r for r in results
+        if r.document_group is None
+        or r.version is None
+        or r.version == oldest_versions.get(r.document_group)
     ]
 
 

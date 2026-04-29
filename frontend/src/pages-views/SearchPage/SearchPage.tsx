@@ -11,6 +11,7 @@ export default function SearchPage() {
   const [filters, setFilters] = useState<SearchFilters>({
     types: ['pptx', 'pdf', 'docx'],
     authorized: 'all',
+    version: 'latest-only',
   });
 
   function toggleType(type: FileType) {
@@ -30,6 +31,10 @@ export default function SearchPage() {
     setFilters((prev) => ({ ...prev, authorized: val }));
   }
 
+  function setVersion(val: NonNullable<SearchFilters['version']>) {
+    setFilters((prev) => ({ ...prev, version: val }));
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.center}>
@@ -44,6 +49,7 @@ export default function SearchPage() {
               onToggleType={toggleType}
               onSetDateRange={setDateRange}
               onSetAuthorized={setAuthorized}
+              onSetVersion={setVersion}
             />
 
             <button className={styles.voiceButton} type="button" aria-label="Voice search (coming soon)" disabled style={{ opacity: 0.4, cursor: 'not-allowed' }}>

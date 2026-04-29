@@ -68,7 +68,8 @@ export async function searchDocuments(req: SearchRequest): Promise<SearchRespons
   const backendReq = {
     query: req.query,
     filters: buildBackendFilters(req.filters),
-    show_latest_only: true,
+    show_latest_only: req.filters.version === 'latest-only',
+    show_oldest_only: req.filters.version === 'oldest-only',
   };
 
   const raw = await apiPost<BackendSearchResponse>('/api/search', backendReq);

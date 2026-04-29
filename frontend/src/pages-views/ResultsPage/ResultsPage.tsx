@@ -40,6 +40,7 @@ export default function ResultsPage() {
   const dateStart = searchParams.get('dateStart') ?? '';
   const dateEnd = searchParams.get('dateEnd') ?? '';
   const authorizedParam = (searchParams.get('authorized') ?? 'all') as NonNullable<SearchFilters['authorized']>;
+  const versionParam = (searchParams.get('version') ?? 'latest-only') as NonNullable<SearchFilters['version']>;
 
   const activeTypes: FileType[] = typesParam
     ? (typesParam.split(',') as FileType[])
@@ -49,6 +50,7 @@ export default function ResultsPage() {
     types: activeTypes,
     dateRange: dateStart || dateEnd ? { start: dateStart, end: dateEnd } : undefined,
     authorized: authorizedParam,
+    version: versionParam,
   };
 
   const request: SearchRequest = { query, filters };
@@ -118,14 +120,14 @@ export default function ResultsPage() {
         setTotalCount(0);
       }
     });
-  }, [query, typesParam, dateStart, dateEnd, authorizedParam]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [query, typesParam, dateStart, dateEnd, authorizedParam, versionParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close the summary panel whenever the result set changes — the active doc
   // may no longer be on screen, and the panel next to an unrelated list feels
   // stale.
   useEffect(() => {
     setActiveSummaryId(null);
-  }, [query, typesParam, dateStart, dateEnd, authorizedParam]);
+  }, [query, typesParam, dateStart, dateEnd, authorizedParam, versionParam]);
 
   function updateParams(updates: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams);
@@ -154,6 +156,10 @@ export default function ResultsPage() {
     updateParams({ authorized: val === 'all' ? null : val });
   }
 
+  function setVersion(val: NonNullable<SearchFilters['version']>) {
+    updateParams({ version: val === 'latest-only' ? null : val });
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.searchArea}>
@@ -169,6 +175,7 @@ export default function ResultsPage() {
               onToggleType={toggleType}
               onSetDateRange={setDateRange}
               onSetAuthorized={setAuthorized}
+              onSetVersion={setVersion}
             />
           </div>
         )}

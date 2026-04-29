@@ -9,7 +9,8 @@ class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=500)
     filters: dict | None = None  # {"category": "policy", "access_level": "public"}
     top_k: int = Field(default=10, ge=1, le=50)
-    show_latest_only: bool = True
+    show_latest_only: bool = False
+    show_oldest_only: bool = False
 
 
 class ChunkResult(BaseModel):

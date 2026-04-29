@@ -113,7 +113,7 @@ Note: for ingestion rows, put the exact CLI command in the "Query used" field.
 
 ---
 
-## 6) Optional Evidence Capture Template
+## 6) Evidence Capture Template
 Use this block under each failed/partial case:
 
 ```markdown
