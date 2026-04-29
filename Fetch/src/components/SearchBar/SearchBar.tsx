@@ -1,17 +1,22 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SearchFilters } from '@/types';
 import styles from './SearchBar.module.scss';
 
 interface Props {
   initialQuery?: string;
+  externalQuery?: string;
   filters?: SearchFilters;
   onSearch?: (query: string) => void;
 }
 
-export default function SearchBar({ initialQuery = '', filters, onSearch }: Props) {
+export default function SearchBar({ initialQuery = '', externalQuery, filters, onSearch }: Props) {
   const [query, setQuery] = useState(initialQuery);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (externalQuery !== undefined) setQuery(externalQuery);
+  }, [externalQuery]);
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();

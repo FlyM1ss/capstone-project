@@ -45,10 +45,33 @@
   color: var(--text-secondary);
   margin-left: auto;
   transition: background-color $transition-speed $transition-easing,
-    color $transition-speed $transition-easing;
+    color $transition-speed $transition-easing,
+    border-color $transition-speed $transition-easing;
 
   &:hover {
     background-color: var(--bg-hover);
     color: var(--text-primary);
   }
+}
+
+.voiceButtonActive {
+  background-color: $text-accent;
+  border-color: $text-accent;
+  color: #ffffff;
+
+  &:hover {
+    background-color: darken($text-accent, 8%);
+    color: #ffffff;
+  }
+}
+
+@keyframes waveBarAnim {
+  0%, 100% { transform: scaleY(0.25); }
+  50%       { transform: scaleY(1); }
+}
+
+.waveAnimBar {
+  animation: waveBarAnim 0.7s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
 }
