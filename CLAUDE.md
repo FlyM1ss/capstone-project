@@ -16,7 +16,11 @@ docker compose up -d                    # Start all 4 services (db, embedding, b
                                         # First run: downloads embedding model (~600MB)
                                         # Does NOT auto-ingest; run ingest_all manually after first start
 docker compose up -d --build            # Rebuild images (only needed after requirements.txt/package.json changes)
+docker compose -f docker-compose.yml -f docker-compose.external-embedding.yml up -d
+                                        # Start without local embedding service (use external EMBEDDING_API_URL, e.g. Colab)
 docker compose down                     # Stop all services
+docker compose -f docker-compose.yml -f docker-compose.external-embedding.yml down
+                                        # Stop stack started in external-embedding mode
 docker compose down -v                  # Stop all services + delete all data (fresh start)
 docker compose logs -f backend          # Tail backend logs (shows ingestion progress)
 docker compose exec backend python -m app.scripts.ingest_all              # Re-ingest clean data (generic + auxiliary)
@@ -29,6 +33,9 @@ docker compose exec backend python -m app.scripts.ingest_all --mode malformed
 docker compose exec backend python -m app.scripts.ingest_all --mode prompt-injected
 docker compose exec backend python -m app.scripts.ingest_all --categories generic malformed
 docker compose exec backend python -m app.scripts.ingest_all --recursive --limit 25
+
+# PowerShell one-off override (without editing .env):
+$env:EMBEDDING_API_URL="https://<your-colab-host>/embed"; docker compose -f docker-compose.yml -f docker-compose.external-embedding.yml up -d
 
 # === Backend standalone ===
 cd backend
@@ -67,6 +74,7 @@ Query → Embed (Qwen3, external service) → Parallel retrieval:
 ```
 
 - **Embedding model** runs as the `embedding` Docker service (GPU-accelerated via NVIDIA Container Toolkit, auto-starts with `docker compose up`). Backend calls it via `EMBEDDING_API_URL` (default `http://embedding:8001/embed` inside Docker). The endpoint expects `POST {"texts": [...]}` and returns `{"embeddings": [[...]]}`. For standalone dev, override to `http://localhost:8001/embed`. Requires an NVIDIA GPU and `nvidia-container-toolkit` on the host.
+- **External embedding mode** is available via `docker-compose.external-embedding.yml`. It skips local `embedding` container startup and uses whatever `EMBEDDING_API_URL` you set (for example a Colab-hosted endpoint).
 - **Single PostgreSQL instance** (ParadeDB image) handles both vector search and BM25 — no separate vector DB.
 - **Title embeddings** stored in separate `document_title_embeddings` table with its own HNSW index for clean separation from chunk embeddings.
 - **BM25 index** is lazily created after the first document ingestion (`_ensure_bm25_index` in `services/ingestion.py`), not in `init.sql`.

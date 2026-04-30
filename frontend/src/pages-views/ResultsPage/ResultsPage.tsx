@@ -5,6 +5,11 @@ import { searchDocuments } from '@/api/search';
 import { ApiError } from '@/api/client';
 import { getCachedSearch, setCachedSearch } from '@/api/searchCache';
 import { FILE_TYPES } from '@/constants/filters';
+import {
+  getQueryBlockReason,
+  QUERY_BLOCKED_CODE,
+  QUERY_BLOCKED_MESSAGE,
+} from '@/utils/queryValidation';
 import SearchBar from '@/components/SearchBar/SearchBar';
 import FilterControls from '@/components/FilterControls/FilterControls';
 import ResultItem from '@/components/ResultItem/ResultItem';
@@ -35,6 +40,7 @@ export default function ResultsPage() {
   const dateStart = searchParams.get('dateStart') ?? '';
   const dateEnd = searchParams.get('dateEnd') ?? '';
   const authorizedParam = (searchParams.get('authorized') ?? 'all') as NonNullable<SearchFilters['authorized']>;
+  const versionParam = (searchParams.get('version') ?? 'latest-only') as NonNullable<SearchFilters['version']>;
 
   const activeTypes: FileType[] = typesParam
     ? (typesParam.split(',') as FileType[])
@@ -44,6 +50,7 @@ export default function ResultsPage() {
     types: activeTypes,
     dateRange: dateStart || dateEnd ? { start: dateStart, end: dateEnd } : undefined,
     authorized: authorizedParam,
+    version: versionParam,
   };
 
   const request: SearchRequest = { query, filters };
@@ -55,6 +62,7 @@ export default function ResultsPage() {
     query ? getCachedSearch(request)?.totalCount ?? 0 : 0
   );
   const [error, setError] = useState<string | null>(null);
+  const [blockedWarning, setBlockedWarning] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [activeSummaryId, setActiveSummaryId] = useState<string | null>(null);
   const summaryCache = useSummaryCache();
@@ -71,7 +79,19 @@ export default function ResultsPage() {
   };
 
   useEffect(() => {
-    if (!query) return;
+    if (!query) {
+      setBlockedWarning(null);
+      return;
+    }
+    const blockReason = getQueryBlockReason(query);
+    if (blockReason) {
+      setBlockedWarning(blockReason);
+      setError(null);
+      setResults([]);
+      setTotalCount(0);
+      return;
+    }
+    setBlockedWarning(null);
     const cached = getCachedSearch(request);
     if (cached) {
       setResults(cached.results);
@@ -87,20 +107,27 @@ export default function ResultsPage() {
         setError(null);
         setCachedSearch(request, res);
       } catch (err) {
+        if (err instanceof ApiError && err.errorCode === QUERY_BLOCKED_CODE) {
+          setBlockedWarning(err.detail ?? QUERY_BLOCKED_MESSAGE);
+          setError(null);
+          setResults([]);
+          setTotalCount(0);
+          return;
+        }
         console.error('Search failed:', err);
         setError(describeSearchError(err));
         setResults([]);
         setTotalCount(0);
       }
     });
-  }, [query, typesParam, dateStart, dateEnd, authorizedParam]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [query, typesParam, dateStart, dateEnd, authorizedParam, versionParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close the summary panel whenever the result set changes — the active doc
   // may no longer be on screen, and the panel next to an unrelated list feels
   // stale.
   useEffect(() => {
     setActiveSummaryId(null);
-  }, [query, typesParam, dateStart, dateEnd, authorizedParam]);
+  }, [query, typesParam, dateStart, dateEnd, authorizedParam, versionParam]);
 
   function updateParams(updates: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams);
@@ -129,24 +156,35 @@ export default function ResultsPage() {
     updateParams({ authorized: val === 'all' ? null : val });
   }
 
+  function setVersion(val: NonNullable<SearchFilters['version']>) {
+    updateParams({ version: val === 'latest-only' ? null : val });
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.searchArea}>
-        <SearchBar initialQuery={query} onSearch={(q) => updateParams({ q })} />
-        <div className={styles.filterRow}>
-          <FilterControls
-            filters={filters}
-            onToggleType={toggleType}
-            onSetDateRange={setDateRange}
-            onSetAuthorized={setAuthorized}
-          />
-        </div>
+        <SearchBar
+          initialQuery={query}
+          onSearch={(q) => updateParams({ q })}
+          warning={blockedWarning}
+        />
+        {!blockedWarning && (
+          <div className={styles.filterRow}>
+            <FilterControls
+              filters={filters}
+              onToggleType={toggleType}
+              onSetDateRange={setDateRange}
+              onSetAuthorized={setAuthorized}
+              onSetVersion={setVersion}
+            />
+          </div>
+        )}
       </div>
 
       <div className={activeSummaryId ? styles.splitLayout : undefined}>
         <div className={styles.mainColumn}>
           <div className={styles.resultsArea}>
-            {isPending ? (
+            {blockedWarning ? null : isPending ? (
               <div className={styles.loading}>
                 <div className={styles.spinner} />
                 <span>Searching...</span>

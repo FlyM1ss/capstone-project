@@ -11,6 +11,7 @@ import {
 import FileTypeBadge from '@/components/FileTypeBadge/FileTypeBadge';
 import DocumentSummaryPanel from '@/components/DocumentSummaryPanel/DocumentSummaryPanel';
 import { timeAgo } from '@/utils/timeAgo';
+import { capitalize } from '@/utils/capitalize';
 import type { FileType } from '@/types';
 import styles from './DocumentPage.module.scss';
 
@@ -122,11 +123,13 @@ export default function DocumentPage() {
         <div className={styles.meta}>
           {doc.author && <span>{doc.author}</span>}
           {doc.author && <span className={styles.dot}>·</span>}
-          <span>{doc.category}</span>
-          {doc.page_count != null && (
+          <span>{capitalize(doc.category)}</span>
+          {doc.page_count != null && doc.page_count > 0 && (
             <>
               <span className={styles.dot}>·</span>
-              <span>{doc.page_count} pages</span>
+              <span>
+                {doc.page_count} {fileType === 'pptx' ? 'slides' : 'pages'}
+              </span>
             </>
           )}
           <span className={styles.dot}>·</span>

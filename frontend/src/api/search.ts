@@ -40,7 +40,6 @@ function toDocument(item: BackendSearchResultItem): Document {
     name: item.title,
     fileType: normalizeFileType(item.doc_type),
     editedAt: item.created_date ?? new Date().toISOString(),
-    isPinned: false,
     author: item.author ?? undefined,
     snippet: item.snippet,
   };
@@ -69,7 +68,8 @@ export async function searchDocuments(req: SearchRequest): Promise<SearchRespons
   const backendReq = {
     query: req.query,
     filters: buildBackendFilters(req.filters),
-    show_latest_only: true,
+    show_latest_only: req.filters.version === 'latest-only',
+    show_oldest_only: req.filters.version === 'oldest-only',
   };
 
   const raw = await apiPost<BackendSearchResponse>('/api/search', backendReq);

@@ -11,7 +11,9 @@ def validate_query(query: str) -> None:
     if len(query) > 500:
         raise HTTPException(status_code=400, detail="Query too long (max 500 characters)")
 
-    # Block obvious prompt injection patterns
+    # Block obvious prompt injection patterns.
+    # Mirror these in frontend/src/utils/queryValidation.ts so the UI can warn
+    # instantly without a round-trip. The backend check is the real barrier.
     injection_patterns = [
         r"ignore\s+(all\s+)?previous\s+instructions",
         r"system\s*prompt",
@@ -20,4 +22,10 @@ def validate_query(query: str) -> None:
     ]
     for pattern in injection_patterns:
         if re.search(pattern, query, re.IGNORECASE):
-            raise HTTPException(status_code=400, detail="Query contains disallowed patterns")
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error_code": "query_blocked_pattern",
+                    "message": "This query was blocked for security reasons.",
+                },
+            )

@@ -9,6 +9,7 @@ function keyFor(req: SearchRequest): string {
     t: [...req.filters.types].sort(),
     d: req.filters.dateRange ?? null,
     a: req.filters.authorized ?? 'all',
+    v: req.filters.version ?? 'latest-only',
   });
 }
 

@@ -43,3 +43,14 @@
     background-color: var(--bg-hover);
   }
 }
+
+.warning {
+  margin-top: 8px;
+  padding: 8px 14px;
+  border-radius: $border-radius-sm;
+  background-color: rgba(192, 57, 43, 0.12);
+  border: 1px solid rgba(192, 57, 43, 0.45);
+  color: $text-accent;
+  font-size: 13px;
+  line-height: 1.4;
+}
