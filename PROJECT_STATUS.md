@@ -1,409 +1,364 @@
-# Capstone Project — Comprehensive Status Report
-*Generated: 2026-03-22*
+# Capstone Project - Complete Current Status Report
+
+- **Generated:** 2026-04-28
+- **Repository checkout:** `main` at `ffdb0b1` (`Revert "feat: summarize from search results"`)
+- **Scope:** Accurate status for the current local working tree. `origin/main` is visible and ahead, but not checked out.
 
 ---
 
-## Project Overview
+## Executive Status
 
-**Name:** AI-Driven Company-Wide Search Engine (Deloitte Prototype)
-**Course:** ITWS 4100 — IT & Web Science Capstone, RPI Spring 2026
-**Status:** MVP/Prototype — core search pipeline fully functional, some features demo-only
+The project is a functional academic prototype for AI-driven enterprise document search. The core backend pipeline is implemented: document ingestion, parsing, chunking, embedding, hybrid retrieval, RRF fusion, optional Cohere reranking, version filtering, document preview, and cached document-detail summaries.
 
-**Tech Stack:**
-- Frontend: Next.js 15 (App Router) + TypeScript + React 19 + shadcn/ui + Tailwind CSS 4 + Vercel AI SDK
-- Backend: FastAPI (Python 3.11) + SQLAlchemy 2.0 (async) + asyncpg
-- Database: PostgreSQL 16 via ParadeDB image (pgvector + BM25 in one instance)
-- Embedding Model: Qwen3-Embedding-0.6B (1024-dim), hosted externally on port 8001
-- Reranker: Cohere Rerank v3.5
-- Document Parsing: Docling 2.31.0
-- Auth: JWT (python-jose) + bcrypt (passlib) + NextAuth.js (installed but unused in UI)
-- Deployment: Docker Compose (3 containers)
+The frontend is also functional for the main user workflow: search, filter by file type/date, view result snippets, pin documents, track recents, open a document detail page, preview/download the source file, inspect extracted text, and request an AI summary.
+
+The system is not production-ready. Auth exists but is not enforced, upload and document endpoints are open, query logging is schema-only, the frontend has no login flow, there are no automated tests, and the Docker stack is development/demo oriented.
+
+---
+
+## Current Tech Stack
+
+| Area | Current implementation |
+| --- | --- |
+| Frontend | Next.js 16.2.3, React 19.2.4, React Router DOM 7.14.0, TypeScript, SCSS modules, npm, Node 20 Docker image |
+| Backend | FastAPI 0.115.12, Python 3.11, async SQLAlchemy 2.0.41, asyncpg |
+| Database | ParadeDB PostgreSQL with pgvector and pg_search |
+| Embeddings | Qwen3-Embedding-0.6B, 1024-dimensional vectors, served by local Docker/standalone FastAPI embedding service |
+| Reranking | Cohere Rerank v3.5, optional fallback to RRF order |
+| Summaries | Cohere Chat `command-r-08-2024`, cached on document rows |
+| Parsing | Docling 2.31.0 for PDF/DOCX/PPTX |
+| Preview conversion | Gotenberg 8 for DOCX/PPTX to PDF conversion |
+| Auth primitives | JWT HS256, bcrypt/passlib, seeded users; not enforced in primary workflows |
+| Deployment | Docker Compose dev/demo stack with GPU embedding service and CPU override |
 
 ---
 
 ## Directory Structure
 
-```
+```text
 capstone-project/
-├── frontend/                        # Next.js 15 frontend
-│   ├── app/
-│   │   ├── page.tsx                 # Landing page
-│   │   ├── layout.tsx
-│   │   ├── globals.css
-│   │   ├── search/page.tsx          # Search results page
-│   │   └── admin/upload/page.tsx    # Document upload admin page
-│   ├── components/
-│   │   ├── search-bar.tsx
-│   │   ├── search-tips.tsx
-│   │   ├── result-card.tsx
-│   │   ├── filter-panel.tsx
-│   │   ├── file-upload.tsx
-│   │   └── ui/                      # shadcn/ui component library
-│   ├── lib/
-│   │   ├── api.ts                   # API client (all backend calls)
-│   │   └── utils.ts
-│   ├── package.json
-│   ├── next.config.ts
-│   ├── tsconfig.json
-│   ├── components.json
-│   └── Dockerfile                   # oven/bun:1-alpine
-├── backend/
-│   ├── app/
-│   │   ├── main.py                  # FastAPI app + CORS + router mounts
-│   │   ├── core/
-│   │   │   ├── config.py            # Pydantic settings (all tuning params)
-│   │   │   ├── database.py          # Async SQLAlchemy session
-│   │   │   └── deps.py              # DI exports
-│   │   ├── models/
-│   │   │   ├── db.py                # SQLAlchemy ORM (5 tables)
-│   │   │   └── schemas.py           # Pydantic request/response schemas
-│   │   ├── api/
-│   │   │   ├── health.py            # GET /api/health
-│   │   │   ├── auth.py              # POST /api/auth/login
-│   │   │   ├── documents.py         # GET/POST /api/documents, GET /api/documents/{id}
-│   │   │   └── search.py            # POST /api/search
-│   │   ├── services/
-│   │   │   ├── search.py            # Hybrid search + RRF merge (268 lines)
-│   │   │   ├── ingestion.py         # Docling parse + chunk + embed + store (157 lines)
-│   │   │   ├── embeddings.py        # HTTP client to Qwen3 server
-│   │   │   ├── reranker.py          # Cohere Rerank with graceful fallback
-│   │   │   ├── auth.py              # JWT + bcrypt logic
-│   │   │   └── validation.py        # Query injection checks
-│   │   └── scripts/
-│   │       └── ingest_all.py        # Batch ingestion (--poisoned / --all flags)
-│   ├── db/
-│   │   └── init.sql                 # Schema + HNSW indexes + seed users
-│   ├── tests/
-│   │   └── __init__.py              # STUB ONLY — no tests
-│   ├── requirements.txt
-│   └── Dockerfile                   # python:3.11-slim
-├── embedding_server.py              # Standalone Qwen3-Embedding-0.6B FastAPI server
-├── docker-compose.yml               # 3 services: db, backend, frontend
-├── .env                             # Secrets (gitignored)
-├── .env.example                     # Template
-├── CLAUDE.md                        # Architecture reference
-├── docs/
-│   ├── plans/                       # MVP design docs (2026-03-09)
-│   └── superpowers/specs/           # Title boosting + version ranking design
-├── mini-strategic-plan/
-│   └── Mini_Strategic_Plan.md
-├── software-engineering/            # SE deliverables (DOCX build script)
-├── Pre-Project-Research/
-├── Proposal/
-└── CostBenefitAnalysis/
++-- backend/
+|   +-- app/
+|   |   +-- api/                    # FastAPI routers: health, auth, documents, search
+|   |   +-- core/                   # settings, async DB engine/session, DI re-export
+|   |   +-- models/                 # SQLAlchemy ORM + Pydantic schemas
+|   |   +-- scripts/                # ingest_all.py batch ingestion CLI
+|   |   +-- services/               # search, ingestion, embeddings, rerank, auth, summaries, PDF conversion
+|   |   +-- main.py                 # app setup, CORS, exception handlers, router mounts
+|   +-- db/init.sql                 # schema, indexes, demo users
+|   +-- tests/                      # stub only
+|   +-- Dockerfile
+|   +-- requirements.txt
++-- frontend/
+|   +-- src/
+|   |   +-- pages/                  # Next Pages Router catch-all and app shell
+|   |   +-- App.tsx                 # React Router route tree
+|   |   +-- pages-views/            # Search, results, account, document detail views
+|   |   +-- components/             # UI components
+|   |   +-- context/                # user, theme, documents/pins/recents
+|   |   +-- api/                    # backend API client wrappers
+|   |   +-- types/
+|   +-- Dockerfile                  # node:20-alpine, npm ci, npm run dev
+|   +-- package.json
++-- data/
+|   +-- generic/
+|   +-- auxiliary/
+|   +-- malformed/
+|   +-- prompt-injected/
+|   +-- poisoned/
+|   +-- sample/
+|   +-- sample-docs/
++-- docs/
+|   +-- search-agent-edge-case-test-pack.md
+|   +-- test-runs/
+|   +-- superpowers/
++-- coursework/
++-- docker-compose.yml
++-- docker-compose.cpu.yml
++-- embedding_server.py
++-- embedding.Dockerfile
++-- embedding.cpu.Dockerfile
++-- DESIGN_DECISIONS.md
++-- PROJECT_STATUS.md
 ```
 
 ---
 
-## What Is Fully Implemented
-
-### Backend
+## Backend Status
 
 | Component | Status | Notes |
-|-----------|--------|-------|
-| FastAPI app + CORS | ✅ Complete | Mounts all routers under `/api` |
-| Health check (`GET /api/health`) | ✅ Complete | Returns DB connectivity status |
-| Login endpoint (`POST /api/auth/login`) | ✅ Complete | JWT HS256, 60min expiry, bcrypt verify |
-| JWT token creation & validation | ✅ Complete | `services/auth.py` |
-| Document upload (`POST /api/documents`) | ✅ Complete | Accepts PDF/DOCX/PPTX, triggers ingestion |
-| Document list (`GET /api/documents`) | ✅ Complete | Returns all documents |
-| Document detail (`GET /api/documents/{id}`) | ✅ Complete | Returns single document |
-| Document parsing (Docling) | ✅ Complete | PDF, DOCX, PPTX → Markdown |
-| Chunking (word-based, overlapping) | ✅ Complete | 512-word chunks, 50-word overlap |
-| Embedding (Qwen3-0.6B) | ✅ Complete | External HTTP call to port 8001 |
-| Batch embed (title + chunks together) | ✅ Complete | Minimizes API call overhead |
-| BM25 keyword search (ParadeDB) | ✅ Complete | Lazy index creation on first ingest |
-| Semantic vector search (pgvector) | ✅ Complete | HNSW index, cosine similarity |
-| Title embedding search | ✅ Complete | Separate table + HNSW index |
-| RRF merge (3 signals) | ✅ Complete | Weighted, title_weight=1.5 |
-| Cohere Rerank v3.5 | ✅ Complete | Graceful fallback if key missing |
-| Version-aware documents | ✅ Complete | `_v(\d+)` filename detection, document_group |
-| "Show latest only" filter | ✅ Complete | Post-rerank version filter |
-| RBAC logic (service layer) | ✅ Complete | 3 roles: analyst/manager/admin |
-| Query input validation | ✅ Complete | 4 injection pattern checks |
-| Database schema + indexes | ✅ Complete | 5 tables, HNSW x2, BM25, access indexes |
-| Seed users in DB | ✅ Complete | 3 demo accounts, bcrypt-hashed |
-| Batch ingestion script | ✅ Complete | `ingest_all.py` with --poisoned/--all modes |
-| Version detection at ingest | ✅ Complete | Auto-increments version on re-ingest |
-| Embedding server | ✅ Complete | `embedding_server.py`, auto GPU/CPU |
+| --- | --- | --- |
+| FastAPI app | Complete | Routers mounted under `/api`; CORS is permissive for demo. |
+| Health check | Complete | `GET /api/health` checks DB connectivity. |
+| Auth login | Partial | `POST /api/auth/login` issues JWTs, but frontend and protected endpoints do not use them. |
+| JWT helpers | Partial | bcrypt and HS256 implemented; secret is hardcoded. |
+| Document upload | Complete but unprotected | `POST /api/documents`; accepts PDF/DOCX/PPTX by extension and ingests immediately. |
+| Document list/detail | Complete but unprotected | `GET /api/documents`, `GET /api/documents/{id}`. |
+| Raw file download | Complete but unprotected | `GET /api/documents/{id}/file`. |
+| PDF preview | Complete but unprotected | `GET /api/documents/{id}/preview`; PDFs returned directly, DOCX/PPTX converted through Gotenberg. |
+| Extracted chunks | Complete but unprotected | `GET /api/documents/{id}/chunks`. |
+| AI summary | Complete but optional/unprotected | `GET /api/documents/{id}/summary`; requires Cohere key and caches results in DB. |
+| Query validation | Partial | Length checks and four prompt-injection/XSS-like regex patterns. |
+| Docling parsing | Complete | PDF/DOCX/PPTX to markdown-like text. |
+| Chunking | Complete | Word-based, 512 words, 50-word overlap. |
+| Embedding client | Complete | Batched HTTP calls to embedding service, 503 on unavailable service. |
+| Content hash skip | Complete | Unchanged `(document_group, version)` files are skipped. |
+| Title embeddings | Complete | Separate table and HNSW index. |
+| BM25 index | Complete | Lazy creation after chunks exist. |
+| Hybrid retrieval | Complete | Semantic chunks + BM25 + title similarity. |
+| RRF merge | Complete | `RRF_K=60`, title boost `1.5`. |
+| Cohere rerank | Complete/optional | Falls back to RRF ordering when unavailable. |
+| Latest-version filter | Complete | Enabled by frontend for all searches. |
+| RBAC filtering | Designed but bypassed | Search endpoint hardcodes admin role. |
+| Query logging | Schema only | `query_logs` table exists; no writes. |
+| Tests | Not implemented | No pytest or backend test suite. |
 
-### Frontend
+---
+
+## Frontend Status
 
 | Component | Status | Notes |
-|-----------|--------|-------|
-| Landing page (`/`) | ✅ Complete | Search bar, example queries |
-| Search results page (`/search?q=...`) | ✅ Complete | Results + filter panel |
-| Admin upload page (`/admin/upload`) | ✅ Complete | Drag-and-drop, progress tracking |
-| `SearchBar` component | ✅ Complete | Form submit, connects to search page |
-| `SearchTips` popup | ✅ Complete | Collapsible example queries |
-| `ResultCard` component | ✅ Complete | Title, snippet, metadata, version badge |
-| `FilterPanel` component | ✅ Complete | Category, doc type, "Latest only" toggle |
-| `FileUpload` component | ✅ Complete | Drag-drop + click, progress status |
-| API client (`lib/api.ts`) | ✅ Complete | `searchDocuments`, `listDocuments`, `uploadDocument` |
+| --- | --- | --- |
+| Next.js host | Complete | Pages Router catch-all dynamically imports the app with SSR disabled. |
+| React Router routes | Complete | `/`, `/results`, `/account`, `/document/:id`. |
+| Search landing page | Complete | Greeting, search bar, filters. |
+| Results page | Complete | Calls backend search, caches responses in memory, shows service errors. |
+| Result item | Complete | Links to document page, snippet, metadata, pin button. |
+| Document detail page | Complete | Preview/text tabs, download, metadata, AI summary side panel. |
+| Account page | Demo only | Displays static demo admin user. |
+| Sidebar | Complete | Pinned and recent documents. |
+| Theme support | Complete | Dark/light mode via localStorage and `data-theme`. |
+| Pins/recents | Complete | localStorage scoped by demo user id. |
+| Search response cache | Complete | In-memory max 20 search requests. |
+| File type filters | Complete | Sent to backend as comma-separated `doc_type`. |
+| Date range filter | Partial | Applied client-side after search results return. |
+| Access/authorized filter | Broken/partial | Frontend sends `access_level`, but backend search ignores that filter and runs as admin. |
+| Admin upload UI | Not implemented | Backend upload route exists, but no frontend upload page exists in this checkout. |
+| Login/session UI | Not implemented | Frontend uses static demo user and sends no bearer tokens. |
+| Search-result summaries | Not implemented by current HEAD | Added in `3fea768`, reverted in `ffdb0b1`; detail-page summaries remain. |
 
-### Infrastructure
+---
+
+## Infrastructure Status
 
 | Component | Status | Notes |
-|-----------|--------|-------|
-| Docker Compose | ✅ Complete | 3 services with health checks + depends_on |
-| Backend Dockerfile | ✅ Complete | python:3.11-slim, hot reload |
-| Frontend Dockerfile | ✅ Complete | bun:1-alpine, hot reload |
-| Database init (init.sql) | ✅ Complete | Schema + seed data on first start |
-| Environment config | ✅ Complete | `.env.example` template provided |
+| --- | --- | --- |
+| Docker Compose | Complete for dev/demo | Defines DB, embedding, backend, Gotenberg, frontend. |
+| DB container | Complete | ParadeDB image, init SQL, health check. |
+| Embedding container | Complete | GPU image with NVIDIA reservation and health check. |
+| CPU embedding override | Complete | `docker-compose.cpu.yml` swaps in CPU image and removes GPU reservations. |
+| Backend container | Complete | Python 3.11 slim, hot reload, data mount. |
+| Gotenberg container | Complete | Internal conversion service for previews. |
+| Frontend container | Complete | Node 20, npm install, dev server. |
+| `.env.example` | Partial | Lists common vars, but Docker backend needs `EMBEDDING_API_URL=http://embedding:8001/embed`; NextAuth vars are stale. |
+| Auto-ingestion | Not implemented | Backend logs document count at startup; run `ingest_all` manually. |
+| Production deployment | Not implemented | No TLS, secrets manager, migrations, CI, backups, scaling, or observability. |
 
 ---
 
-## What Is Partially Implemented (Stubs / Bypassed)
+## API Endpoints
 
-### 1. Auth Integration in Search (`backend/app/api/search.py:21`)
-- **What exists:** Full JWT token creation, login endpoint, `get_user_from_token()` function all work.
-- **What's missing:** The search endpoint extracts no token from request headers. It hardcodes `user_role = "admin"`.
-- **Impact:** Every user gets admin-level results. RBAC access control logic in `services/search.py` is dead code at runtime.
-- **Fix:** Add `Authorization: Bearer ...` header extraction and call `auth.get_user_from_token()`.
-
-### 2. Query Logging (`models/db.py` → `QueryLog` table)
-- **What exists:** `QueryLog` table (id, user_id, query_text, result_count, selected_doc_id, latency_ms) is defined in ORM and `init.sql`.
-- **What's missing:** Nothing ever writes to it. No code path calls `INSERT INTO query_logs`.
-- **Impact:** No search analytics, no audit trail.
-
-### 3. NextAuth.js Session Management
-- **What exists:** `next-auth` is installed in `package.json`.
-- **What's missing:** No `[...nextauth]` route handler, no `SessionProvider` in layout, no `useSession()` usage.
-- **Impact:** Login page was removed (commit `06ba9c4`). Auth tokens can't be passed from frontend to backend.
-
-### 4. Frontend Auth Token Passing
-- **What exists:** `searchDocuments(query, filters?, token?, showLatestOnly?)` has a `token` parameter in `lib/api.ts`. It sends `Authorization: Bearer ${token}` if provided.
-- **What's missing:** No session system to supply that token. The token is always `undefined`.
+| Method | Path | Runtime auth | Status |
+| --- | --- | --- | --- |
+| `GET` | `/api/health` | None | Complete |
+| `POST` | `/api/auth/login` | None | Complete JWT issuance |
+| `POST` | `/api/search` | Hardcoded admin | Functional, RBAC bypassed |
+| `GET` | `/api/documents` | None | Complete |
+| `POST` | `/api/documents` | None | Complete ingestion, unprotected |
+| `GET` | `/api/documents/{id}` | None | Complete |
+| `GET` | `/api/documents/{id}/file` | None | Complete |
+| `GET` | `/api/documents/{id}/preview` | None | Complete with Gotenberg for DOCX/PPTX |
+| `GET` | `/api/documents/{id}/chunks` | None | Complete |
+| `GET` | `/api/documents/{id}/summary` | None | Complete if Cohere is configured |
 
 ---
 
-## What Is Not Implemented
+## Search Pipeline
 
-| Feature | Notes |
-|---------|-------|
-| Document detail page (`/documents/[id]`) | Designed in MVP doc, route not created |
-| Search pagination | No offset/limit, always returns top_k |
-| User creation API endpoint | Users seeded in DB only; no POST /api/users |
-| Admin-only protection on upload | `POST /api/documents` has no auth check |
-| Rate limiting | No middleware on any endpoint |
-| Test suite | `backend/tests/` has only `__init__.py` |
-| Query analytics dashboard | QueryLog table exists but is never written to |
-| Monitoring / alerting | No logging beyond uvicorn stdout |
-| Production deployment guide | Dev-only Docker Compose, no production hardening |
-| Secrets management | API keys in `.env` file (Cohere key visible) |
-| Error feedback to user | Some catch blocks are silent (BM25, title search) |
-
----
-
-## API Endpoints Reference
-
-| Method | Path | Auth Required | Status |
-|--------|------|---------------|--------|
-| `GET` | `/api/health` | None | ✅ Full |
-| `POST` | `/api/auth/login` | None (sends credentials) | ✅ Full |
-| `POST` | `/api/search` | None enforced (hardcoded admin) | ⚠️ Bypassed |
-| `GET` | `/api/documents` | None | ✅ Full |
-| `POST` | `/api/documents` | None enforced | ⚠️ Unprotected |
-| `GET` | `/api/documents/{id}` | None | ✅ Full |
-
----
-
-## Search Pipeline (End-to-End Connected)
-
-```
-User Query (frontend)
-  → POST /api/search (search.py router)
-  → services/validation.py  [injection pattern check]
-  → services/embeddings.py  [POST http://host.docker.internal:8001/embed]
-  → Parallel SQL:
-      ├─ pgvector cosine sim on document_chunks.embedding (top 50)
-      ├─ ParadeDB BM25 on document_chunks.content (top 50)
-      └─ pgvector cosine sim on document_title_embeddings.embedding (top 50)
-  → RRF merge (k=60, title weight=1.5x)
-  → Cohere Rerank v3.5 (or passthrough fallback)
-  → Version filter (show_latest_only: hide superseded)
-  → RBAC filter (currently always admin → no filtering)
-  → Return SearchResponse {results, total, latency_ms}
+```text
+Frontend query
+  -> POST /api/search
+  -> validate_query()
+  -> generate query embedding with Qwen service
+  -> pgvector semantic chunk search
+  -> ParadeDB BM25 chunk search
+  -> pgvector title embedding search
+  -> weighted RRF merge
+  -> optional Cohere rerank
+  -> batch document metadata fetch
+  -> collapse duplicate documents
+  -> latest-version filter
+  -> SearchResponse
 ```
 
-The search pipeline is **fully connected end-to-end** as long as the embedding server (port 8001) is running. Reranker gracefully degrades if Cohere key is absent.
+Operational notes:
+
+- `top_k` request field defaults to 10 and is bounded 1-50.
+- Retrieval candidates use `SEARCH_TOP_K=50`.
+- Reranking returns `RERANK_TOP_N=10` by default.
+- Frontend always sends `show_latest_only: true`.
+- Cohere rerank failure is silent fallback.
+- BM25/title SQL failures roll back and continue, but are not logged.
 
 ---
 
 ## Database Schema
 
-### Tables
+| Table | Purpose |
+| --- | --- |
+| `documents` | Metadata, access level, file path, versioning, content hash, cached summary. |
+| `document_chunks` | Chunk text and 1024-dim embeddings. |
+| `document_title_embeddings` | One title embedding per document. |
+| `users` | Demo users and roles. |
+| `query_logs` | Designed for analytics/audit; unused. |
 
-| Table | Columns | Purpose |
-|-------|---------|---------|
-| `documents` | id, title, author, doc_type, category, created_date, access_level, file_path, page_count, document_group, version | Core document metadata + versioning |
-| `document_chunks` | id, document_id(FK), chunk_index, content, embedding(1024), metadata(JSONB) | Chunked text + vectors |
-| `document_title_embeddings` | id, document_id(FK unique), title_text, embedding(1024) | Per-document title vectors |
-| `users` | id, email(unique), name, hashed_password, role | Auth / RBAC |
-| `query_logs` | id, user_id(FK), query_text, result_count, selected_doc_id, latency_ms | Analytics (never written to) |
+Important indexes:
 
-### Indexes
-
-| Index | Type | Columns |
-|-------|------|---------|
-| Semantic search | HNSW | `document_chunks.embedding` (m=16, ef_construction=200) |
-| Title search | HNSW | `document_title_embeddings.embedding` |
-| BM25 | Tantivy (ParadeDB) | `document_chunks.content` — lazy, created at first ingest |
-| Access filter | B-tree | `documents.access_level` |
-| Category filter | B-tree | `documents.category` |
-| Version grouping | B-tree | `documents.document_group` |
+- HNSW on `document_chunks.embedding`.
+- HNSW on `document_title_embeddings.embedding`.
+- B-tree indexes on chunk document id, document access level, category, document group, query log user id.
+- BM25 `idx_chunks_bm25` created lazily after ingestion.
 
 ---
 
-## Key Configuration Parameters
+## Data Corpus Status
 
-All tunable in `backend/app/core/config.py`:
+Tracked data files total: 100.
 
-```python
-EMBEDDING_API_URL: str = "http://localhost:8001/embed"  # Override in .env for Docker
-COHERE_API_KEY: str = ""                                 # Reranker (optional)
-SEARCH_TOP_K: int = 50                                   # Candidates per retrieval path
-RERANK_TOP_N: int = 10                                   # Final results after rerank
-RRF_K: int = 60                                          # RRF smoothing constant
-CHUNK_SIZE: int = 512                                    # Words per chunk
-CHUNK_OVERLAP: int = 50                                  # Overlap words between chunks
-TITLE_BOOST_WEIGHT: float = 1.5                          # Title signal multiplier in RRF
-```
+| Folder | Count | Purpose |
+| --- | ---: | --- |
+| `data/generic` | 6 | Broad enterprise appendix documents. |
+| `data/auxiliary` | 52 | Clean curated policies, standards, reports, and decks. |
+| `data/malformed` | 6 | Parser robustness and malformed-file testing. |
+| `data/prompt-injected` | 6 | Prompt-injection style adversarial content. |
+| `data/poisoned` | 24 | Legacy poisoned/conflicting corpus. |
+| `data/sample` | 4 | Older sample documents. |
+| `data/sample-docs` | 2 | Legacy external sample PDFs. |
 
----
-
-## Dependencies
-
-### Backend (requirements.txt)
-
-```
-fastapi==0.115.12
-uvicorn[standard]==0.34.2
-sqlalchemy[asyncio]==2.0.41
-asyncpg==0.30.0
-psycopg2-binary==2.9.10
-pgvector==0.3.6
-pydantic-settings==2.9.1
-python-multipart==0.0.20
-docling==2.31.0
-cohere==5.15.0
-httpx==0.28.1
-python-jose[cryptography]==3.4.0
-passlib[bcrypt]==1.7.4
-```
-
-### Frontend (package.json key deps)
-
-```json
-"next": "16.1.6",
-"react": "19.2.3",
-"@ai-sdk/react": "^3.0.118",
-"ai": "^6.0.116",
-"next-auth": "^4.24.13",
-"lucide-react": "^0.577.0",
-"shadcn": "^4.0.2",
-"tailwind-merge": "^3.5.0"
-```
-
----
-
-## Hardcoded Values / Technical Debt
-
-| Location | Issue | Impact |
-|----------|-------|--------|
-| `backend/app/api/search.py:21` | `user_role = "admin"` hardcoded | RBAC bypassed for all users |
-| `backend/app/services/auth.py:13` | `SECRET_KEY = "dev-secret-key-change-in-production"` | Should come from `.env` |
-| `frontend/components/filter-panel.tsx` | Categories and doc types are hardcoded arrays | Breaks if new types are ingested |
-| `backend/app/core/config.py` | `EMBEDDING_API_URL` defaults to `localhost` | Fails in Docker without `.env` override |
-| `.env` | Cohere API key in plaintext file | Should use secrets manager in production |
-
----
-
-## Docker Setup
-
-### Services
-
-| Service | Image | Port | Depends On |
-|---------|-------|------|------------|
-| `db` | `paradedb/paradedb:latest` | 5432 | — |
-| `backend` | `./backend` (python:3.11-slim) | 8000 | `db` (healthy) |
-| `frontend` | `./frontend` (bun:1-alpine) | 3000 | `backend` |
-
-### Key Commands
+Default clean ingest:
 
 ```bash
-docker compose up -d
-docker compose down
-docker compose logs -f backend
 docker compose exec backend python -m app.scripts.ingest_all
-docker compose exec backend python -m app.scripts.ingest_all --all
 ```
 
-### Notes
-- The embedding server (`embedding_server.py`) runs **outside** Docker on port 8001. The `.env` sets `EMBEDDING_API_URL=http://host.docker.internal:8001/embed` to bridge this.
-- `./data` directory is volume-mounted into the backend container for ingestion.
-- Hot reload is active in both backend (uvicorn --reload) and frontend (bun run dev).
+Useful variants:
+
+```bash
+docker compose exec backend python -m app.scripts.ingest_all --poisoned
+docker compose exec backend python -m app.scripts.ingest_all --all
+docker compose exec backend python -m app.scripts.ingest_all --clean
+docker compose exec backend python -m app.scripts.ingest_all --mode prompt-injected
+docker compose exec backend python -m app.scripts.ingest_all --categories generic malformed
+docker compose exec backend python -m app.scripts.ingest_all --recursive --limit 25
+```
+
+---
+
+## Key Configuration
+
+From `backend/app/core/config.py`:
+
+```python
+DATABASE_URL = "postgresql+asyncpg://deloitte:deloitte_dev@localhost:5432/search_engine"
+EMBEDDING_API_URL = "http://localhost:8001/embed"
+COHERE_API_KEY = ""
+GOTENBERG_URL = "http://localhost:3001"
+SEARCH_TOP_K = 50
+RERANK_TOP_N = 10
+RRF_K = 60
+CHUNK_SIZE = 512
+CHUNK_OVERLAP = 50
+TITLE_BOOST_WEIGHT = 1.5
+EMBED_BATCH_SIZE = 64
+```
+
+Docker-specific values are passed through Compose/environment. In Docker, backend should call the embedding service at `http://embedding:8001/embed`; standalone backend can use `http://localhost:8001/embed`.
+
+---
+
+## Known Gaps and Risks
+
+| Area | Gap | Impact |
+| --- | --- | --- |
+| Auth enforcement | Search hardcodes `user_role = "admin"` | RBAC is bypassed. |
+| Frontend auth | Static demo user, no login/token handling | JWT login endpoint is unused by UI. |
+| Upload security | Upload endpoint is unauthenticated | Any caller can ingest documents. |
+| Document access | File/preview/chunks/summary endpoints are unauthenticated | Any caller with document id can read content. |
+| JWT secret | Hardcoded secret in source | Tokens can be forged by anyone with code access. |
+| Frontend access filter | Sends unsupported `access_level` filter | UI filter does not reliably affect backend results. |
+| Query logging | No inserts into `query_logs` | No analytics or audit trail. |
+| Tests | No automated backend/frontend tests | No regression safety. |
+| Migrations | No Alembic/migration flow | Schema updates require resets/manual SQL. |
+| Upload validation | Extension-only, no size/MIME scan | Unsafe for untrusted uploads. |
+| CORS | Wildcard origins with credentials | Not production safe. |
+| Rate limiting | None | Login/search/upload can be abused. |
+| Observability | Minimal logs, no metrics/tracing | Hard to diagnose production issues. |
+| Deployment | Dev Compose only | No production hardening. |
+
+---
+
+## Git and Worktree Status
+
+Observed before documentation edits:
+
+- Local branch: `main`.
+- Local HEAD: `ffdb0b1 Revert "feat: summarize from search results"`.
+- Remote HEAD: `origin/main` at `710be02 Update .gitignore`.
+- Branch relationship: local `main` is ahead 1 and behind 34.
+- Existing untracked files before this work: `AGENTS.md` and `frontend/.dockerignore`.
+
+Notable current-history commits:
+
+```text
+ffdb0b1 Revert "feat: summarize from search results"
+3fea768 feat: summarize from search results
+6d51da9 feat: ai summary
+da5d5dc feat: add PPTX/DOCX preview via Gotenberg PDF conversion
+6603889 chore: rename Fetch/ to frontend/, consolidate coursework into coursework/
+c49ad1b Merge pull request #6 from FlyM1ss/feat/document-preview-and-pins
+a90799c feat: add CPU-only Docker profile for non-NVIDIA environments
+e96da3b Add finalized auxiliary documents
+90ab37f feat: add title boosting and version-aware ranking to search pipeline
+6b6c03d feat: implement complete MVP prototype
+```
+
+Remote-only commits visible after local HEAD mostly relate to final report polish and follow-up fixes. They should be merged or rebased before treating this checkout as synchronized with GitHub.
 
 ---
 
 ## Test Coverage
 
-**Coverage: 0%**
+Automated coverage is effectively 0%.
 
-- `backend/tests/__init__.py` is an empty stub.
-- No test framework configured (no pytest, no jest/vitest).
-- No unit tests, integration tests, or end-to-end tests exist.
+- `backend/tests/` has no actual tests.
+- Frontend `package.json` has no test script.
+- No CI configuration was found in the reviewed files.
+- Manual/recorded testing exists in `docs/test-runs/2026-04-16-results.md` and `docs/search-agent-edge-case-test-pack.md`.
 
----
+Recommended first automated tests:
 
-## Known Issues Summary
-
-1. **RBAC bypassed** — `user_role = "admin"` hardcoded in search endpoint. All documents visible to all users.
-2. **Auth not wired to frontend** — Sign-in page removed, NextAuth.js installed but unused.
-3. **Query logging never fires** — `QueryLog` table defined, nothing ever inserts into it.
-4. **Embedding server is external dependency** — If port 8001 is not running, all searches fail (no fallback).
-5. **Silent failures** — BM25 and title search catch exceptions and return empty lists without surfacing errors.
-6. **No pagination** — Search always returns top `RERANK_TOP_N` (default 10); no cursor/offset support.
-7. **No document detail page** — Result cards have no clickable destination.
-8. **Frontend filter values hardcoded** — `["policy", "report", "deck", "memo"]` and `["pdf", "docx", "pptx"]` are static strings in `filter-panel.tsx`.
-9. **Upload endpoint unprotected** — Anyone can upload documents without authentication.
-10. **Zero tests** — No automated verification of any component.
+1. Unit tests for `_extract_version_info()`, `_sanitize_bm25_query()`, and `_filter_latest_versions()`.
+2. API tests for `/api/search` error behavior when embedding service is unavailable.
+3. Ingestion tests for unchanged hash skip and changed same-version replacement.
+4. Frontend API mapping tests for `search.ts` filter conversion.
+5. Integration test for document detail endpoints using a seeded PDF.
 
 ---
 
-## Recent Git History
-
-```
-06ba9c4  ui: frontend update (removing sign in)
-f3a7b33  fix: now supporting pptx
-90ab37f  feat: add title boosting and version-aware ranking to search pipeline
-6393124  render to docx
-e076dc7  Create Mini_Strategic_Plan.md
-c2a885f  Upload first batch of auxiliary data
-a44c30b  data: rename sample docs with clean descriptive titles
-5c2c485  fix: sql and cors errors
-032890b  data: ingestion fix
-2a62303  local embedding model
-2ddc459  infra: login page added
-0c5348c  package: swapping to bun
-6b6c03d  feat: implement complete MVP prototype
-```
-
----
-
-## Overall Maturity Assessment
+## Overall Maturity
 
 | Area | Maturity |
-|------|----------|
-| Core search pipeline | Production-quality prototype |
-| Document ingestion | Production-quality prototype |
-| Frontend UI | Production-quality prototype |
-| Version management | Complete |
-| Docker deployment | Development-grade |
-| Authentication | Implemented but not enforced |
-| RBAC | Implemented but bypassed |
-| Testing | None |
-| Observability | None beyond stdout logs |
-| Security hardening | Dev-only (hardcoded secrets, no rate limiting) |
+| --- | --- |
+| Core search pipeline | Strong prototype |
+| Document ingestion | Strong prototype |
+| Document preview/download | Functional prototype |
+| AI summaries | Functional optional feature |
+| Frontend search/detail UX | Functional prototype |
+| Docker local stack | Functional development/demo setup |
+| Auth/RBAC | Designed but not enforced |
+| Security hardening | Demo-only |
+| Testing | Missing |
+| Observability | Minimal |
+| Production readiness | Not ready |
 
-**Bottom line:** The core value proposition (hybrid search with reranking over ingested documents) works end-to-end. Auth, RBAC, logging, tests, and production hardening are either bypassed or absent.
+Bottom line: the project is complete enough for a capstone demo of AI-powered enterprise search, document preview, and summary-assisted triage. The next engineering phase should focus on auth enforcement, frontend/backend filter correctness, tests, migrations, and operational hardening.
