@@ -24,6 +24,7 @@ export interface SearchFilters {
   types: FileType[];
   dateRange?: { start: string; end: string };
   authorized?: 'all' | 'authorized-only' | 'public-only';
+  version?: 'latest-only' | 'all-versions' | 'oldest-only';
 }
 
 export interface SearchRequest {

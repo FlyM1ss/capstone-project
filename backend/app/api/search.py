@@ -24,6 +24,7 @@ async def search(
         db, body.query, filters=body.filters,
         user_role=user_role, top_k=body.top_k,
         show_latest_only=body.show_latest_only,
+        show_oldest_only=body.show_oldest_only,
     )
 
     return SearchResponse(

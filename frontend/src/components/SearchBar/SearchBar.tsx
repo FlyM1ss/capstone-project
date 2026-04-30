@@ -53,6 +53,7 @@ export default function SearchBar({ initialQuery = '', filters, onSearch, warnin
     if (filters?.dateRange?.start) params.set('dateStart', filters.dateRange.start);
     if (filters?.dateRange?.end) params.set('dateEnd', filters.dateRange.end);
     if (filters?.authorized) params.set('authorized', filters.authorized);
+    if (filters?.version) params.set('version', filters.version);
 
     navigate(`/results?${params.toString()}`);
   }

@@ -1,7 +1,7 @@
 import { FileType, SearchFilters } from '@/types';
 import FilterChip from '@/components/FilterChip/FilterChip';
 import FileTypeBadge from '@/components/FileTypeBadge/FileTypeBadge';
-import { FILE_TYPES, AUTHORIZED_OPTIONS } from '@/constants/filters';
+import { FILE_TYPES, AUTHORIZED_OPTIONS, VERSION_OPTIONS } from '@/constants/filters';
 import styles from './FilterControls.module.scss';
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
   onToggleType: (type: FileType) => void;
   onSetDateRange: (start: string, end: string) => void;
   onSetAuthorized: (val: NonNullable<SearchFilters['authorized']>) => void;
+  onSetVersion: (val: NonNullable<SearchFilters['version']>) => void;
 }
 
 const FileIcon = () => (
@@ -34,7 +35,16 @@ const LockIcon = () => (
   </svg>
 );
 
-export default function FilterControls({ filters, onToggleType, onSetDateRange, onSetAuthorized }: Props) {
+const VersionIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="12 3 20 7.5 20 16.5 12 21 4 16.5 4 7.5 12 3" />
+    <polyline points="12 12 20 7.5" />
+    <polyline points="12 12 12 21" />
+    <polyline points="12 12 4 7.5" />
+  </svg>
+);
+
+export default function FilterControls({ filters, onToggleType, onSetDateRange, onSetAuthorized, onSetVersion }: Props) {
   const dateStart = filters.dateRange?.start ?? '';
   const dateEnd = filters.dateRange?.end ?? '';
 
@@ -103,6 +113,28 @@ export default function FilterControls({ filters, onToggleType, onSetDateRange, 
                 value={opt.value}
                 checked={filters.authorized === opt.value}
                 onChange={() => onSetAuthorized(opt.value)}
+              />
+              <span>{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      </FilterChip>
+
+      <FilterChip
+        label="Versions"
+        isActive={filters.version !== 'latest-only'}
+        icon={<VersionIcon />}
+      >
+        <div className={styles.section}>
+          <p className={styles.label}>Version filter</p>
+          {VERSION_OPTIONS.map((opt) => (
+            <label key={opt.value} className={styles.radioOption}>
+              <input
+                type="radio"
+                name="version-filter"
+                value={opt.value}
+                checked={filters.version === opt.value}
+                onChange={() => onSetVersion(opt.value)}
               />
               <span>{opt.label}</span>
             </label>
